@@ -99,7 +99,7 @@ function Dashboard() {
     <div className="app dashboard-app">
       <header className="dash-navbar">
         <div className="dash-nav-left">
-          <span className="dash-logo">EasyRetro</span>
+          <span className="dash-logo">SegmentoRetro</span>
         </div>
 
         <nav className="dash-nav-center">
@@ -111,10 +111,7 @@ function Dashboard() {
           <button className="dash-tab">Subscription</button>
         </nav>
 
-        <div className="dash-nav-right">
-          <span className="dash-username">Vijayalakshmi</span>
-          <div className="dash-avatar">V</div>
-        </div>
+        
       </header>
 
       <main className="dash-main">
