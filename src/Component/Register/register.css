@@ -1,0 +1,225 @@
+.auth-app {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #e5f0ff 0, #f3f4f6 45%, #e5e7eb 100%);
+}
+
+.auth-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1.5rem 4rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 1.5rem;
+  padding: 2.25rem 2.1rem 2.4rem;
+  box-shadow:
+    0 18px 40px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(209, 213, 219, 0.9);
+}
+
+.auth-card h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.8rem;
+  color: #111827;
+  text-align: center;
+}
+
+.auth-toggle {
+  display: flex;
+  width: 100%;
+  margin-bottom: 1.2rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  gap: 0.2rem;
+}
+
+.auth-toggle button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-toggle button.active {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+}
+
+.auth-toggle button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.auth-subtitle {
+  margin: 0 0 1.5rem;
+  font-size: 0.98rem;
+  color: #4b5563;
+  text-align: center;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.auth-field input {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.9);
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 0.6rem 0.8rem 0.6rem 2.3rem;
+}
+
+.input-icon {
+  position: absolute;
+  left: 0.7rem;
+  font-size: 1rem;
+  color: #9ca3af;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-field input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 4.2rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.55rem;
+  border: none;
+  background: transparent;
+  padding: 0.2rem;
+  font-size: 1rem;
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: #4f46e5;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.auth-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: none;
+  background-image: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #f9fafb;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 10px 25px rgba(79, 70, 229, 0.35),
+    0 0 0 1px rgba(79, 70, 229, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.auth-submit:hover:enabled {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 14px 30px rgba(56, 189, 248, 0.45),
+    0 0 0 1px rgba(15, 23, 42, 0.4);
+}
+
+.auth-submit:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.auth-footer-text {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.auth-footer-text a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+
+.auth-footer-text .link-button {
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: none;
+  font: inherit;
+  color: #6366f1;
+  cursor: pointer;
+}
+
+.auth-footer-text .link-button:hover {
+  text-decoration: underline;
+}
