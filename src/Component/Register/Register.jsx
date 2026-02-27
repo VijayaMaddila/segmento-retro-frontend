@@ -5,7 +5,7 @@ import './register.css'
 
 function Register() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState('register') // 'register' or 'login'
+  const [mode, setMode] = useState('register') 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,7 +49,7 @@ function Register() {
         }
         localStorage.setItem('token', data.token)
 
-        // Decode JWT to extract user id (stored as "id" claim in backend)
+        
         try {
           const parts = data.token.split('.')
           if (parts.length === 3) {
@@ -63,13 +63,13 @@ function Register() {
             }
           }
         } catch (e) {
-          // If decoding fails, just log; token is still usable for auth
+         
           console.error('Failed to decode JWT payload', e)
         }
 
         navigate('/retroDashboard')
       } else {
-        // after successful registration, switch to login mode
+       
         setMode('login')
       }
     } catch (err) {
@@ -81,13 +81,7 @@ function Register() {
 
   return (
     <div className="app auth-app">
-      <header className="navbar">
-        <div className="nav-left">
-          <span className="logo-mark">Retro</span>
-        </div>
-      </header>
-
-      <main className="auth-main">
+       <main className="auth-main">
         <div className="auth-card">
           <h1>{mode === 'register' ? 'Create account' : 'Log in'}</h1>
           <p className="auth-subtitle">

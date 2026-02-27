@@ -1,21 +1,19 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Register from './Component/Register/Register';
-import Dashboard from './Component/Dashboard';
+import Dashboard from './Component/Dashboard/Dashboard';
+import Board from './Component/Board/Board';
+
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Redirect root to login/register combined page */}
         <Route path="/" element={<Navigate to="/login" />} />
-
-        {/* Combined login/register UI */}
         <Route path="/login" element={<Register />} />
         <Route path="/register" element={<Register />} />
-
-        {/* Post-login dashboard */}
         <Route path="/retroDashboard" element={<Dashboard />} />
+        <Route path="/board/:boardId" element={<Board/>}/>
+       
 
       </Routes>
     </BrowserRouter>

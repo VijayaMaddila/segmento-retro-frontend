@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './dashboard.css';
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [boardTitle, setBoardTitle] = useState('');
   const [creating, setCreating] = useState(false);
@@ -41,10 +43,15 @@ function Dashboard() {
         throw new Error(data.message || 'Failed to create board');
       }
 
-      // Reset and close modal on success
+  
       setBoardTitle('');
       setSelectedTemplate(null);
       setShowCreateBoard(false);
+      
+      
+      if (data.id) {
+        navigate(`/board/${data.id}`);
+      }
     } catch (err) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -77,7 +84,7 @@ function Dashboard() {
       const list = Array.isArray(data) ? data : [];
       setTemplates(list);
 
-      // If no template selected yet, default to the first one
+      
       if (!selectedTemplate && list.length > 0) {
         setSelectedTemplate(list[0]);
       }
@@ -91,8 +98,6 @@ function Dashboard() {
   useEffect(() => {
     if (!showCreateBoard) return;
     ensureTemplatesLoaded();
-    // we intentionally omit dependencies on templates/loading to avoid refetch loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCreateBoard]);
 
   return (
@@ -102,7 +107,8 @@ function Dashboard() {
           <span className="dash-logo">SegmentoRetro</span>
         </div>
 
-        <nav className="dash-nav-center">
+       <div className='nave-bar'>
+         <nav className="dash-nav-center">
           <button className="dash-tab active">Dashboard</button>
           <button className="dash-tab">Teams</button>
           <button className="dash-tab">Analytics</button>
@@ -110,6 +116,7 @@ function Dashboard() {
           <button className="dash-tab">Integrations</button>
           <button className="dash-tab">Subscription</button>
         </nav>
+        </div>
 
         
       </header>
@@ -184,7 +191,7 @@ function Dashboard() {
                     type="button"
                     className="link-button"
                     onClick={() => {
-                      // Always show the full template list when using custom templates
+                      
                       setShowTemplateList(true);
                       ensureTemplatesLoaded();
                     }}
