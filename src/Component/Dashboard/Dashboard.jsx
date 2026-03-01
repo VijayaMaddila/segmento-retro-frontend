@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import "./dashboard.css";
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
+//Shared helpers
 function getInitials(name) {
   if (!name) return "?";
   return name
@@ -46,9 +46,7 @@ const PALETTE = [
   { bg: "#e8eaf6", accent: "#3f51b5" },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
 // CREATE TEMPLATE MODAL
-// ─────────────────────────────────────────────────────────────────────────────
 function CreateTemplateModal({ onClose, onCreated }) {
   const [templateName, setTemplateName] = useState("");
   const [columns, setColumns] = useState([
@@ -184,10 +182,7 @@ function CreateTemplateModal({ onClose, onCreated }) {
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 // CREATE TEAM MODAL
-// ─────────────────────────────────────────────────────────────────────────────
 function CreateTeamModal({ onClose, onCreated }) {
   const [teamName, setTeamName] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
@@ -306,8 +301,6 @@ function CreateTeamModal({ onClose, onCreated }) {
                 </button>
               )}
             </div>
-
-            {/* Scrollable user list — always visible */}
             <div className="user-list">
               {loadingUsers ? (
                 <div className="user-list-empty">
@@ -391,19 +384,66 @@ function CreateTeamModal({ onClose, onCreated }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SHARED CARD COMPONENTS
-// ─────────────────────────────────────────────────────────────────────────────
-function BoardCard({ board, onClick }) {
+// SHARED CARD COMPONENT
+function BoardCard({ board, onClick, onDelete }) {
   const { bg, accent } = PALETTE[board.id % PALETTE.length];
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
+
   return (
     <div
       className="dash-card"
-      style={{ background: bg, cursor: "pointer" }}
-      onClick={onClick}
+      style={{ background: bg, cursor: "pointer", position: "relative" }}
     >
       <div className="dash-card-accent" style={{ background: accent }} />
-      <div className="dash-card-body">
+      <div className="card-menu-wrapper" ref={menuRef}>
+        <button
+          className="card-menu-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+        >
+          ⋮
+        </button>
+        {showMenu && (
+          <div className="card-dropdown-menu">
+            <button
+              className="card-dropdown-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onClick();
+              }}
+            >
+              <span>👁</span> Open Board
+            </button>
+            <button
+              className="card-dropdown-item delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onDelete(board.id);
+              }}
+            >
+              <span>✕</span> Delete Board
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="dash-card-body" onClick={onClick}>
         <div className="dash-card-avatar" style={{ background: accent }}>
           {getInitials(board.title)}
         </div>
@@ -432,12 +472,52 @@ function BoardCard({ board, onClick }) {
   );
 }
 
-function TeamCard({ team, idx }) {
+function TeamCard({ team, idx, onDelete }) {
   const { bg, accent } = PALETTE[idx % PALETTE.length];
   const memberCount = team.members?.length || 0;
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
+
   return (
-    <div className="dash-card" style={{ background: bg }}>
+    <div className="dash-card" style={{ background: bg, position: "relative" }}>
       <div className="dash-card-accent" style={{ background: accent }} />
+      <div className="card-menu-wrapper" ref={menuRef}>
+        <button
+          className="card-menu-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+        >
+          ⋮
+        </button>
+        {showMenu && (
+          <div className="card-dropdown-menu">
+            <button
+              className="card-dropdown-item delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onDelete(team.id);
+              }}
+            >
+              <span>✕</span> Delete Team
+            </button>
+          </div>
+        )}
+      </div>
       <div className="dash-card-body">
         <div className="dash-card-avatar" style={{ background: accent }}>
           {getInitials(team.name)}
@@ -475,10 +555,7 @@ function TeamCard({ team, idx }) {
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 // TEAMS TAB
-// ─────────────────────────────────────────────────────────────────────────────
 function TeamsTab() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -507,6 +584,38 @@ function TeamsTab() {
     }
   }
 
+  async function handleDeleteTeam(teamId) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this team? This action cannot be undone.",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      console.log("Deleting team:", teamId);
+      const res = await fetch(`http://localhost:8080/api/teams/${teamId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      console.log("Delete response status:", res.status);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Delete failed:", data);
+        throw new Error(data.message || "Failed to delete team");
+      }
+
+      const responseData = await res.json().catch(() => null);
+      console.log("Delete successful:", responseData);
+      setTeams((prev) => prev.filter((t) => t.id !== teamId));
+
+      alert("Team deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting team:", err);
+      alert("Error deleting team: " + (err.message || "Unknown"));
+    }
+  }
+
   return (
     <div className="tab-container">
       <div className="tab-header">
@@ -516,7 +625,7 @@ function TeamsTab() {
             Manage your teams and collaborate with members
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className="search-container">
             <FiSearch className="search-icon" size={16} />
             <input
@@ -580,42 +689,54 @@ function TeamsTab() {
         </div>
       )}
 
-      {!loading && !error && teams.length > 0 && (() => {
-        const filteredTeams = teams.filter((team) => {
-          if (!searchQuery.trim()) return true;
-          const query = searchQuery.toLowerCase();
+      {!loading &&
+        !error &&
+        teams.length > 0 &&
+        (() => {
+          const filteredTeams = teams.filter((team) => {
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase();
+            return (
+              team.name?.toLowerCase().includes(query) ||
+              team.members?.some(
+                (m) =>
+                  m.name?.toLowerCase().includes(query) ||
+                  m.email?.toLowerCase().includes(query),
+              )
+            );
+          });
+
           return (
-            team.name?.toLowerCase().includes(query) ||
-            team.members?.some(m => 
-              m.name?.toLowerCase().includes(query) ||
-              m.email?.toLowerCase().includes(query)
-            )
+            <>
+              <div className="cards-grid">
+                <button
+                  className="dash-card dash-card--add"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <div className="add-card-icon">+</div>
+                  <div className="add-card-label">Create Team</div>
+                </button>
+                {filteredTeams.map((team, idx) => (
+                  <TeamCard
+                    key={team.id}
+                    team={team}
+                    idx={idx}
+                    onDelete={handleDeleteTeam}
+                  />
+                ))}
+              </div>
+
+              {filteredTeams.length === 0 && searchQuery && (
+                <p
+                  className="empty-desc"
+                  style={{ marginTop: 16, textAlign: "center" }}
+                >
+                  No teams match "{searchQuery}"
+                </p>
+              )}
+            </>
           );
-        });
-
-        return (
-          <>
-            <div className="cards-grid">
-              <button
-                className="dash-card dash-card--add"
-                onClick={() => setShowCreate(true)}
-              >
-                <div className="add-card-icon">+</div>
-                <div className="add-card-label">Create Team</div>
-              </button>
-              {filteredTeams.map((team, idx) => (
-                <TeamCard key={team.id} team={team} idx={idx} />
-              ))}
-            </div>
-
-            {filteredTeams.length === 0 && searchQuery && (
-              <p className="empty-desc" style={{ marginTop: 16, textAlign: 'center' }}>
-                No teams match "{searchQuery}"
-              </p>
-            )}
-          </>
-        );
-      })()}
+        })()}
 
       {showCreate && (
         <CreateTeamModal
@@ -626,15 +747,11 @@ function TeamsTab() {
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 // DASHBOARD
-// ─────────────────────────────────────────────────────────────────────────────
 const NAV_TABS = [
   "Dashboard",
   "Teams",
   "Analytics",
-  "Action items",
   "Integrations",
   "Subscription",
 ];
@@ -645,7 +762,6 @@ function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Close drawer when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -659,6 +775,10 @@ function Dashboard() {
   }, [menuOpen]);
 
   function handleTabSelect(tab) {
+    if (tab === "Analytics") {
+      navigate("/analytics");
+      return;
+    }
     setActiveTab(tab);
     setMenuOpen(false);
   }
@@ -725,6 +845,40 @@ function Dashboard() {
       setBoardsError(err.message || "Failed to load boards");
     } finally {
       setLoadingBoards(false);
+    }
+  }
+
+  async function handleDeleteBoard(boardId) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this board? All columns and cards will be permanently deleted.",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      console.log("Deleting board:", boardId);
+      const res = await fetch(`http://localhost:8080/api/boards/${boardId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      console.log("Delete response status:", res.status);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Delete failed:", data);
+        throw new Error(data.message || "Failed to delete board");
+      }
+
+      const responseData = await res.json().catch(() => null);
+      console.log("Delete successful:", responseData);
+
+      // Remove board from UI instantly
+      setUserBoards((prev) => prev.filter((b) => b.id !== boardId));
+
+      alert("Board deleted successfully!");
+    } catch (err) {
+      console.error("Error deleting board:", err);
+      alert("Error deleting board: " + (err.message || "Unknown"));
     }
   }
 
@@ -806,12 +960,9 @@ function Dashboard() {
 
   return (
     <div className="app dashboard-app">
-      {/* Navbar */}
       <div ref={menuRef}>
         <header className="dash-navbar">
-          {/* LEFT: Hamburger (mobile) + Logo */}
           <div className="dash-nav-left">
-            {/* Hamburger — shown only on small screens via CSS */}
             <button
               className={`nav-hamburger${menuOpen ? " open" : ""}`}
               onClick={() => setMenuOpen((o) => !o)}
@@ -823,8 +974,6 @@ function Dashboard() {
             </button>
             <span className="dash-logo">SegmentoRetro</span>
           </div>
-
-          {/* CENTER: Desktop tab bar (hidden on mobile via CSS) */}
           <div className="nave-bar">
             <nav className="dash-nav-center">
               {NAV_TABS.map((tab) => (
@@ -838,8 +987,6 @@ function Dashboard() {
               ))}
             </nav>
           </div>
-
-          {/* RIGHT: Profile + Logout (always on right) */}
           <div className="dash-nav-right">
             <div className="nav-profile">
               <div className="nav-avatar">{getInitials(userName)}</div>
@@ -850,8 +997,6 @@ function Dashboard() {
             </button>
           </div>
         </header>
-
-        {/* Mobile drawer — slides in below navbar */}
         <nav className={`dash-mobile-menu${menuOpen ? " open" : ""}`}>
           {NAV_TABS.map((tab) => (
             <button
@@ -918,58 +1063,61 @@ function Dashboard() {
               </div>
             )}
 
-            {!loadingBoards && (() => {
-              const filteredBoards = userBoards.filter((board) => {
-                if (!searchQuery.trim()) return true;
-                const query = searchQuery.toLowerCase();
+            {!loadingBoards &&
+              (() => {
+                const filteredBoards = userBoards.filter((board) => {
+                  if (!searchQuery.trim()) return true;
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    board.title?.toLowerCase().includes(query) ||
+                    board.teamName?.toLowerCase().includes(query) ||
+                    board.templateName?.toLowerCase().includes(query)
+                  );
+                });
+
                 return (
-                  board.title?.toLowerCase().includes(query) ||
-                  board.teamName?.toLowerCase().includes(query) ||
-                  board.templateName?.toLowerCase().includes(query)
+                  <>
+                    <div className="cards-grid">
+                      <button
+                        type="button"
+                        className="dash-card dash-card--add"
+                        onClick={() => setShowCreateBoard(true)}
+                      >
+                        <div className="add-card-icon">+</div>
+                        <div className="add-card-label">Add board</div>
+                      </button>
+                      {filteredBoards.map((board) => (
+                        <BoardCard
+                          key={board.id}
+                          board={board}
+                          onClick={() => navigate(`/board/${board.id}`)}
+                          onDelete={handleDeleteBoard}
+                        />
+                      ))}
+                    </div>
+
+                    {filteredBoards.length === 0 && searchQuery && (
+                      <p
+                        className="empty-desc"
+                        style={{ marginTop: 16, textAlign: "center" }}
+                      >
+                        No boards match "{searchQuery}"
+                      </p>
+                    )}
+
+                    {filteredBoards.length === 0 &&
+                      !searchQuery &&
+                      userBoards.length === 0 && (
+                        <p className="empty-desc" style={{ marginTop: 8 }}>
+                          No boards yet. Create your first board to get started!
+                        </p>
+                      )}
+                  </>
                 );
-              });
-
-              return (
-                <>
-                  <div className="cards-grid">
-                    <button
-                      type="button"
-                      className="dash-card dash-card--add"
-                      onClick={() => setShowCreateBoard(true)}
-                    >
-                      <div className="add-card-icon">+</div>
-                      <div className="add-card-label">Add board</div>
-                    </button>
-                    {filteredBoards.map((board) => (
-                      <BoardCard
-                        key={board.id}
-                        board={board}
-                        onClick={() => navigate(`/board/${board.id}`)}
-                      />
-                    ))}
-                  </div>
-
-                  {filteredBoards.length === 0 && searchQuery && (
-                    <p className="empty-desc" style={{ marginTop: 16, textAlign: 'center' }}>
-                      No boards match "{searchQuery}"
-                    </p>
-                  )}
-
-                  {filteredBoards.length === 0 && !searchQuery && userBoards.length === 0 && (
-                    <p className="empty-desc" style={{ marginTop: 8 }}>
-                      No boards yet. Create your first board to get started!
-                    </p>
-                  )}
-                </>
-              );
-            })()}
+              })()}
           </div>
         )}
-
-        {/* ── TEAMS TAB ── */}
         {activeTab === "Teams" && <TeamsTab />}
-
-        {/* ── OTHER TABS ── */}
         {!["Dashboard", "Teams"].includes(activeTab) && (
           <div className="empty-state">
             <h2 style={{ fontSize: 20, marginBottom: 8, color: "#555" }}>
@@ -979,8 +1127,6 @@ function Dashboard() {
           </div>
         )}
       </main>
-
-      {/* ── Create Board Modal ── */}
       {showCreateBoard && (
         <div
           className="modal-backdrop"
@@ -1124,8 +1270,6 @@ function Dashboard() {
           </div>
         </div>
       )}
-
-      {/* ── Create Template Modal ── */}
       {showCreateTemplate && (
         <CreateTemplateModal
           onClose={() => setShowCreateTemplate(false)}

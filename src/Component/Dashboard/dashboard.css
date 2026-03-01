@@ -137,8 +137,6 @@
   background: rgba(255, 255, 255, 0.18);
   border-color: #fff;
 }
-
-/* ── Hamburger (hidden on desktop) ── */
 .nav-hamburger {
   display: none;
   flex-direction: column;
@@ -253,7 +251,9 @@
   border: 1px solid #d1d5db;
   border-radius: 8px;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   font-family: inherit;
 }
 
@@ -274,16 +274,16 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .search-container .search-clear:hover {
   color: #ef4444;
   background: #fee2e2;
 }
-/* ═══════════════════════════════════════════════════════════
-   CARDS GRID  (boards + teams share the same grid)
-═══════════════════════════════════════════════════════════ */
+/*CARDS GRID  (boards + teams share the same grid)*/
 .cards-grid {
   display: flex;
   flex-wrap: wrap;
@@ -317,6 +317,92 @@
   left: 0;
   right: 0;
   height: 4px;
+}
+
+.card-menu-wrapper {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.card-menu-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-menu-btn:hover {
+  background: #fff;
+  color: #374151;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.card-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  animation: dropdownSlide 0.15s ease;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+  font-weight: 500;
+}
+.card-dropdown-item:hover {
+  background: #f3f4f6;
+}
+.card-dropdown-item.delete {
+  color: #ef4444;
+}
+.card-dropdown-item.delete:hover {
+  background: #fef2f2;
+}
+.card-dropdown-item span {
+  font-size: 14px;
 }
 .dash-card-body {
   display: flex;
@@ -756,8 +842,6 @@
   color: #9aa0a6;
   font-style: italic;
 }
-
-/* TEMPLATE PICKER (inside Create Board modal) */
 .template-chip {
   padding: 8px 10px;
   background: #f1f3f4;
@@ -796,8 +880,6 @@
 .template-list-item:hover {
   background: #f1f3f4;
 }
-
-/* COLUMN ROWS (Create Template modal)*/
 .tpl-columns-list {
   display: flex;
   flex-direction: column;
@@ -974,9 +1056,7 @@
   color: #fff;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SELECTED MEMBER CHIPS
-═══════════════════════════════════════════════════════════ */
+/* SELECTED MEMBER CHIPS*/
 .selected-members {
   display: flex;
   flex-direction: column;
@@ -1042,33 +1122,22 @@
   color: #e53935;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   RESPONSIVE — TABLET (≤ 900px)
-═══════════════════════════════════════════════════════════ */
+/*RESPONSIVE — TABLET (≤ 900px)*/
 @media (max-width: 900px) {
   .nave-bar {
-    /* Collapse centre tabs into the drawer */
     display: none;
   }
-
   .nav-hamburger {
     display: flex;
   }
-
-  /* Username label hidden; keep avatar only */
   .nav-username {
     display: none;
   }
-
-  /* Tighten the profile pill */
   .nav-profile {
     padding: 4px;
   }
 }
-
-/* ═══════════════════════════════════════════════════════════
-   RESPONSIVE — MOBILE (≤ 600px)
-═══════════════════════════════════════════════════════════ */
+/*RESPONSIVE — MOBILE (≤ 600px) */
 @media (max-width: 600px) {
   .dash-navbar {
     padding: 0 12px;
@@ -1078,8 +1147,6 @@
   .dash-logo {
     font-size: 15px;
   }
-
-  /* Hide logout button text, show as icon-like small pill */
   .nav-logout-btn {
     padding: 5px 10px;
     font-size: 12px;

@@ -97,7 +97,14 @@ function SortDropdown({ value, onChange }) {
 }
 
 /* ── Mobile Nav Dropdown ── */
-function MobileNavMenu({ onAddColumn, search, setSearch, sortBy, setSortBy }) {
+function MobileNavMenu({
+  onAddColumn,
+  search,
+  setSearch,
+  sortBy,
+  setSortBy,
+  isCreator,
+}) {
   const [open, setOpen] = useState(false);
   const [showSortSub, setShowSortSub] = useState(false);
   const ref = useRef(null);
@@ -213,18 +220,20 @@ function MobileNavMenu({ onAddColumn, search, setSearch, sortBy, setSortBy }) {
             <div className="mobile-dropdown-divider" />
 
             {/* Add Column */}
-            <button
-              className="mobile-dropdown-item primary"
-              onClick={() => {
-                setOpen(false);
-                onAddColumn();
-              }}
-            >
-              <span className="mobile-item-icon">
-                <FiPlus size={15} />
-              </span>
-              <span className="mobile-item-label">Add Column</span>
-            </button>
+            {isCreator && (
+              <button
+                className="mobile-dropdown-item primary"
+                onClick={() => {
+                  setOpen(false);
+                  onAddColumn();
+                }}
+              >
+                <span className="mobile-item-icon">
+                  <FiPlus size={15} />
+                </span>
+                <span className="mobile-item-label">Add Column</span>
+              </button>
+            )}
           </div>
         </>
       )}
@@ -279,6 +288,30 @@ function Board() {
   const cardMenuRef = useRef(null);
 
   const name = localStorage.getItem("name" || "userName");
+  const currentUserId = localStorage.getItem("userId");
+
+  // Check if current user is the board creator
+  // Handle both direct ID and nested object cases
+  const isCreator = board && currentUserId && (
+    String(board.userId) === String(currentUserId) ||
+    String(board.createdBy?.id) === String(currentUserId) ||
+    String(board.createdBy) === String(currentUserId) ||
+    String(board.ownerId) === String(currentUserId) ||
+    String(board.user_id) === String(currentUserId) ||
+    String(board.created_by) === String(currentUserId)
+  );
+
+  // Debug logging (remove after testing)
+  useEffect(() => {
+    if (board) {
+      console.log("Board data:", board);
+      console.log("Current user ID:", currentUserId);
+      console.log("Board userId:", board.userId);
+      console.log("Board createdBy:", board.createdBy);
+      console.log("Board createdBy.id:", board.createdBy?.id);
+      console.log("Is creator:", isCreator);
+    }
+  }, [board, currentUserId, isCreator]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -434,11 +467,14 @@ function Board() {
   }
 
   async function addColumn() {
+    if (!isCreator) {
+      return alert("Only the board creator can add columns");
+    }
     if (!newColumnTitle.trim()) return alert("Please enter a column title");
     setAddingColumn(true);
     try {
       const token = localStorage.getItem("token");
-      const position = columns.length;
+      
       const res = await fetch(
         `http://localhost:8080/api/board-columns/${boardId}`,
         {
@@ -450,12 +486,14 @@ function Board() {
           body: JSON.stringify({
             boardId: Number(boardId),
             title: newColumnTitle.trim(),
-            position,
+            position: columns.length,
           }),
         },
       );
+      
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to add column");
+      
       setNewColumnTitle("");
       setShowAddColumn(false);
       await fetchBoard();
@@ -467,6 +505,9 @@ function Board() {
   }
 
   async function updateColumn(columnId) {
+    if (!isCreator) {
+      return alert("Only the board creator can edit columns");
+    }
     if (!editColumnTitle.trim()) return alert("Column title cannot be empty");
 
     try {
@@ -491,7 +532,7 @@ function Board() {
       );
 
       const data = await res.json().catch(() => ({}));
-      
+
       if (!res.ok) {
         console.error("Update column error:", data);
         throw new Error(data.message || "Update failed");
@@ -503,7 +544,7 @@ function Board() {
       setEditingColumnId(null);
       setEditColumnTitle("");
       setOpenColumnMenu(null);
-      
+
       // Refetch board to ensure UI is in sync
       await fetchBoard();
     } catch (err) {
@@ -513,6 +554,9 @@ function Board() {
   }
 
   async function deleteColumn(columnId) {
+    if (!isCreator) {
+      return alert("Only the board creator can delete columns");
+    }
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this column? All cards in this column will also be deleted.",
     );
@@ -671,6 +715,37 @@ function Board() {
         </button>
       </div>
     );
+
+  async function deleteBoard() {
+    if (!isCreator) {
+      return alert("Only the board creator can delete the board");
+    }
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this board? All columns and cards will be permanently deleted.",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:8080/api/boards/${boardId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to delete board");
+      }
+
+      navigate("/retroDashboard");
+    } catch (err) {
+      alert("Error deleting board: " + (err.message || "Unknown"));
+    }
+  }
+
   async function deleteCard(cardId) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this card?",
@@ -690,7 +765,6 @@ function Board() {
 
       if (!res.ok) throw new Error("Failed to delete");
 
-      // Remove card from UI immediately
       setCards((prev) => {
         const updated = {};
         for (const colId in prev) {
@@ -725,7 +799,6 @@ function Board() {
 
       const updatedCard = await res.json();
 
-      // Update state instantly
       setCards((prev) => ({
         ...prev,
         [String(columnId)]: prev[String(columnId)].map((card) =>
@@ -759,7 +832,6 @@ function Board() {
 
       if (!res.ok) throw new Error("Delete failed");
 
-      // Remove comment from UI instantly
       setCommentsByCard((prev) => ({
         ...prev,
         [String(cardId)]: prev[String(cardId)].filter(
@@ -795,12 +867,15 @@ function Board() {
 
       const updatedComment = await res.json();
 
-      // Update state instantly
       setCommentsByCard((prev) => ({
         ...prev,
         [String(cardId)]: prev[String(cardId)].map((comment) =>
           comment.id === commentId
-            ? { ...comment, content: updatedComment.content, message: updatedComment.content }
+            ? {
+                ...comment,
+                content: updatedComment.content,
+                message: updatedComment.content,
+              }
             : comment,
         ),
       }));
@@ -815,25 +890,33 @@ function Board() {
   return (
     <div className="board-container">
       <header className="board-header">
+        {/* ── Mobile hamburger menu (left side on mobile) ── */}
+        <div className="mobile-only">
+          <MobileNavMenu
+            onAddColumn={() => setShowAddColumn(true)}
+            search={search}
+            setSearch={setSearch}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            isCreator={isCreator}
+          />
+        </div>
+
         <div className="board-header-left">
-          <button
-            className="board-back-btn"
-            onClick={() => navigate("/retroDashboard")}
-          >
-            Back
-          </button>
-          <h1 className="board-title">{board.title}</h1>
+          <div className="board-logo">SegmentoRetro</div>
         </div>
 
         {/* ── Desktop controls (hidden on mobile) ── */}
         <div className="board-header-right desktop-only">
-          <button
-            className="add-column-btn"
-            onClick={() => setShowAddColumn(true)}
-          >
-            <FiPlus size={14} />
-            <span className="btn-label">Add Column</span>
-          </button>
+          {isCreator && (
+            <button
+              className="add-column-btn"
+              onClick={() => setShowAddColumn(true)}
+            >
+              <FiPlus size={14} />
+              <span className="btn-label">Add Column</span>
+            </button>
+          )}
           <div className="board-search-wrapper">
             <FiSearch className="board-search-icon" size={14} />
             <input
@@ -854,18 +937,12 @@ function Board() {
           </div>
           <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
-
-        {/* ── Mobile hamburger menu ── */}
-        <div className="mobile-only">
-          <MobileNavMenu
-            onAddColumn={() => setShowAddColumn(true)}
-            search={search}
-            setSearch={setSearch}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-          />
-        </div>
       </header>
+
+      {/* Board Title Section */}
+      <div className="board-title-section">
+        <h1 className="board-page-title">{board.title}</h1>
+      </div>
 
       <main className="board-main">
         <div className="board-columns">
@@ -915,43 +992,51 @@ function Board() {
                         <h2 className="column-title">
                           {column.title || column.name || "Untitled"}
                         </h2>
-                        <span className="column-count-badge">
-                          {columnCards.length}
-                        </span>
-                        <div className="column-menu-wrapper" ref={openColumnMenu === column.id ? columnMenuRef : null}>
-                          <button
-                            className="column-menu"
-                            onClick={() =>
-                              setOpenColumnMenu(
-                                openColumnMenu === column.id ? null : column.id,
-                              )
+                        {isCreator && (
+                          <div
+                            className="column-menu-wrapper"
+                            ref={
+                              openColumnMenu === column.id
+                                ? columnMenuRef
+                                : null
                             }
                           >
-                            ⋮
-                          </button>
-                          {openColumnMenu === column.id && (
-                            <div className="column-dropdown-menu">
-                              <button
-                                className="column-dropdown-item"
-                                onClick={() => {
-                                  setEditingColumnId(column.id);
-                                  setEditColumnTitle(
-                                    column.title || column.name || "",
-                                  );
-                                  setOpenColumnMenu(null);
-                                }}
-                              >
-                                <span>✎</span> Edit Column
-                              </button>
-                              <button
-                                className="column-dropdown-item delete"
-                                onClick={() => deleteColumn(column.id)}
-                              >
-                                <span>✕</span> Delete Column
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                            <button
+                              className="column-menu"
+                              onClick={() =>
+                                setOpenColumnMenu(
+                                  openColumnMenu === column.id
+                                    ? null
+                                    : column.id,
+                                )
+                              }
+                            >
+                              ⋮
+                            </button>
+                            {openColumnMenu === column.id && (
+                              <div className="column-dropdown-menu">
+                                <button
+                                  className="column-dropdown-item"
+                                  onClick={() => {
+                                    setEditingColumnId(column.id);
+                                    setEditColumnTitle(
+                                      column.title || column.name || "",
+                                    );
+                                    setOpenColumnMenu(null);
+                                  }}
+                                >
+                                  <span>✎</span> Edit Column
+                                </button>
+                                <button
+                                  className="column-dropdown-item delete"
+                                  onClick={() => deleteColumn(column.id)}
+                                >
+                                  <span>✕</span> Delete Column
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -1025,7 +1110,9 @@ function Board() {
                                 <div className="card-form-buttons">
                                   <button
                                     className="save-card-btn"
-                                    onClick={() => updateCard(realId, column.id)}
+                                    onClick={() =>
+                                      updateCard(realId, column.id)
+                                    }
                                   >
                                     ✔
                                   </button>
@@ -1043,12 +1130,21 @@ function Board() {
                             ) : (
                               <>
                                 <p className="card-text">{card.content}</p>
-                                <div className="card-menu-wrapper" ref={openCardMenu === cardKey ? cardMenuRef : null}>
+                                <div
+                                  className="card-menu-wrapper"
+                                  ref={
+                                    openCardMenu === cardKey
+                                      ? cardMenuRef
+                                      : null
+                                  }
+                                >
                                   <button
                                     className="card-menu-btn"
                                     onClick={() =>
                                       setOpenCardMenu(
-                                        openCardMenu === cardKey ? null : cardKey,
+                                        openCardMenu === cardKey
+                                          ? null
+                                          : cardKey,
                                       )
                                     }
                                   >
@@ -1161,7 +1257,9 @@ function Board() {
                                             className="comment-input"
                                             value={editCommentValue}
                                             onChange={(e) =>
-                                              setEditCommentValue(e.target.value)
+                                              setEditCommentValue(
+                                                e.target.value,
+                                              )
                                             }
                                             autoFocus
                                           />
@@ -1201,7 +1299,7 @@ function Board() {
                                               onClick={() => {
                                                 setEditingCommentId(c.id);
                                                 setEditCommentValue(
-                                                  c.message || c.content
+                                                  c.message || c.content,
                                                 );
                                               }}
                                               title="Edit comment"
