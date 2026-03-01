@@ -5,6 +5,10 @@ import {
   FiSearch,
   FiChevronDown,
   FiCheck,
+  FiMenu,
+  FiX,
+  FiPlus,
+  FiSliders,
 } from "react-icons/fi";
 import { useParams, useNavigate } from "react-router-dom";
 import "./board.css";
@@ -67,7 +71,9 @@ function SortDropdown({ value, onChange }) {
   return (
     <div className="sort-dropdown" ref={ref}>
       <button className="sort-dropdown-btn" onClick={() => setOpen((p) => !p)}>
-        {selected?.label || "Sort"} <FiChevronDown size={13} />
+        <FiSliders size={13} />
+        <span className="btn-label">{selected?.label || "Sort"}</span>
+        <FiChevronDown size={13} />
       </button>
       {open && (
         <div className="sort-dropdown-menu">
@@ -90,6 +96,142 @@ function SortDropdown({ value, onChange }) {
   );
 }
 
+/* ── Mobile Nav Dropdown ── */
+function MobileNavMenu({ onAddColumn, search, setSearch, sortBy, setSortBy }) {
+  const [open, setOpen] = useState(false);
+  const [showSortSub, setShowSortSub] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setShowSortSub(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Close menu on ESC
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        setShowSortSub(false);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
+  const selectedSort = SORT_OPTIONS.find((o) => o.value === sortBy);
+
+  return (
+    <div className="mobile-nav-menu" ref={ref}>
+      <button
+        className={`mobile-menu-btn ${open ? "active" : ""}`}
+        onClick={() => {
+          setOpen((p) => !p);
+          setShowSortSub(false);
+        }}
+        aria-label="Open menu"
+        aria-expanded={open}
+      >
+        {open ? <FiX size={20} /> : <FiMenu size={20} />}
+      </button>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="mobile-menu-backdrop"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="mobile-dropdown">
+            {/* Search row */}
+            <div className="mobile-dropdown-section">
+              <div className="mobile-search-wrapper">
+                <FiSearch className="mobile-search-icon" size={14} />
+                <input
+                  className="mobile-search-input"
+                  type="text"
+                  placeholder="Search cards..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                />
+                {search && (
+                  <button
+                    className="mobile-search-clear"
+                    onClick={() => setSearch("")}
+                  >
+                    <FiX size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mobile-dropdown-divider" />
+
+            {/* Sort sub-menu trigger */}
+            <button
+              className="mobile-dropdown-item has-sub"
+              onClick={() => setShowSortSub((p) => !p)}
+            >
+              <span className="mobile-item-icon">
+                <FiSliders size={15} />
+              </span>
+              <span className="mobile-item-label">
+                Sort: <strong>{selectedSort?.label}</strong>
+              </span>
+              <FiChevronDown
+                size={13}
+                className={`mobile-sub-chevron ${showSortSub ? "rotated" : ""}`}
+              />
+            </button>
+
+            {showSortSub && (
+              <div className="mobile-sort-sub">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`mobile-sort-item ${sortBy === opt.value ? "active" : ""}`}
+                    onClick={() => {
+                      setSortBy(opt.value);
+                      setShowSortSub(false);
+                    }}
+                  >
+                    {opt.label}
+                    {sortBy === opt.value && <FiCheck size={12} />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="mobile-dropdown-divider" />
+
+            {/* Add Column */}
+            <button
+              className="mobile-dropdown-item primary"
+              onClick={() => {
+                setOpen(false);
+                onAddColumn();
+              }}
+            >
+              <span className="mobile-item-icon">
+                <FiPlus size={15} />
+              </span>
+              <span className="mobile-item-label">Add Column</span>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Board() {
   const { boardId } = useParams();
   const navigate = useNavigate();
@@ -102,10 +244,12 @@ function Board() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("default");
 
-  // Add column modal
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [addingColumn, setAddingColumn] = useState(false);
+
+  const [editingCardId, setEditingCardId] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
   const [cardForms, setCardForms] = useState(() => {
     try {
@@ -122,7 +266,32 @@ function Board() {
   const [commentsByCard, setCommentsByCard] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [postingCommentCard, setPostingCommentCard] = useState(null);
-  const [votesByCard, setVotesByCard] = useState({}); // tracks voted cardIds for current user
+  const [votesByCard, setVotesByCard] = useState({});
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentValue, setEditCommentValue] = useState("");
+
+  const [openColumnMenu, setOpenColumnMenu] = useState(null);
+  const [editingColumnId, setEditingColumnId] = useState(null);
+  const [editColumnTitle, setEditColumnTitle] = useState("");
+  const columnMenuRef = useRef(null);
+
+  const [openCardMenu, setOpenCardMenu] = useState(null);
+  const cardMenuRef = useRef(null);
+
+  const name = localStorage.getItem("name" || "userName");
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target)) {
+        setOpenColumnMenu(null);
+      }
+      if (cardMenuRef.current && !cardMenuRef.current.contains(e.target)) {
+        setOpenCardMenu(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchBoard();
@@ -297,27 +466,116 @@ function Board() {
     }
   }
 
+  async function updateColumn(columnId) {
+    if (!editColumnTitle.trim()) return alert("Column title cannot be empty");
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const requestBody = {
+        title: editColumnTitle.trim(),
+      };
+
+      console.log("Sending update request:", requestBody);
+
+      const res = await fetch(
+        `http://localhost:8080/api/board-columns/${columnId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(requestBody),
+        },
+      );
+
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        console.error("Update column error:", data);
+        throw new Error(data.message || "Update failed");
+      }
+
+      console.log("Column updated successfully:", data);
+      console.log("Title in response:", data.title);
+
+      setEditingColumnId(null);
+      setEditColumnTitle("");
+      setOpenColumnMenu(null);
+      
+      // Refetch board to ensure UI is in sync
+      await fetchBoard();
+    } catch (err) {
+      console.error("Error updating column:", err);
+      alert("Error updating column: " + (err.message || "Unknown"));
+    }
+  }
+
+  async function deleteColumn(columnId) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this column? All cards in this column will also be deleted.",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://localhost:8080/api/board-columns/${columnId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        },
+      );
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      // Remove column from UI instantly
+      setColumns((prev) => prev.filter((col) => col.id !== columnId));
+      setCards((prev) => {
+        const updated = { ...prev };
+        delete updated[String(columnId)];
+        return updated;
+      });
+      setOpenColumnMenu(null);
+    } catch (err) {
+      alert("Error deleting column: " + (err.message || "Unknown"));
+    }
+  }
+
   async function castVote(cardId) {
     const userId = localStorage.getItem("userId");
     if (!userId) return alert("You must be logged in to vote");
-
     const key = String(cardId);
     const alreadyVoted = votesByCard[key];
-
-    // Optimistic UI update
     setVotesByCard((p) => ({ ...p, [key]: !alreadyVoted }));
     setCards((prev) => {
-      const updated = { ...prev };
-      for (const colId in updated) {
-        updated[colId] = updated[colId].map((c) =>
-          String(c.id) === key
-            ? { ...c, votes: (c.votes || 0) + (alreadyVoted ? -1 : 1) }
-            : c,
-        );
+      const updated = {};
+
+      for (const colId in prev) {
+        const columnCards = Array.isArray(prev[colId]) ? prev[colId] : [];
+
+        updated[colId] = columnCards.map((c) => {
+          if (!c || c.id == null) return c;
+
+          if (String(c.id) === key) {
+            const currentVotes = Number(c.votes) || 0;
+            return {
+              ...c,
+              votes: currentVotes + (alreadyVoted ? -1 : 1),
+            };
+          }
+
+          return c;
+        });
       }
+
       return updated;
     });
-
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
@@ -335,12 +593,10 @@ function Board() {
         },
       );
       if (!res.ok) {
-        // Revert on failure
         setVotesByCard((p) => ({ ...p, [key]: alreadyVoted }));
         await fetchAllCards(localStorage.getItem("token"), columns);
       }
     } catch (err) {
-      // Revert on error
       setVotesByCard((p) => ({ ...p, [key]: alreadyVoted }));
       await fetchAllCards(localStorage.getItem("token"), columns);
       console.error("Vote error:", err);
@@ -364,7 +620,7 @@ function Board() {
         ...p,
         [String(cardId)]: Array.isArray(data) ? data : [],
       }));
-    } catch (err) {
+    } catch {
       setCommentsByCard((p) => ({ ...p, [String(cardId)]: [] }));
     }
   }
@@ -415,6 +671,146 @@ function Board() {
         </button>
       </div>
     );
+  async function deleteCard(cardId) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this card?",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`http://localhost:8080/api/cards/${cardId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      // Remove card from UI immediately
+      setCards((prev) => {
+        const updated = {};
+        for (const colId in prev) {
+          updated[colId] = prev[colId].filter(
+            (c) => String(c.id) !== String(cardId),
+          );
+        }
+        return updated;
+      });
+    } catch (err) {
+      alert("Error deleting card");
+    }
+  }
+  async function updateCard(cardId, columnId) {
+    if (!editValue.trim()) return alert("Card cannot be empty");
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`http://localhost:8080/api/cards/${cardId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          content: editValue,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Update failed");
+
+      const updatedCard = await res.json();
+
+      // Update state instantly
+      setCards((prev) => ({
+        ...prev,
+        [String(columnId)]: prev[String(columnId)].map((card) =>
+          card.id === cardId ? { ...card, content: updatedCard.content } : card,
+        ),
+      }));
+
+      setEditingCardId(null);
+      setEditValue("");
+    } catch (err) {
+      alert("Error updating card");
+    }
+  }
+  async function deleteComment(commentId, cardId) {
+    const confirmDelete = window.confirm("Delete this comment?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://localhost:8080/api/comments/${commentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        },
+      );
+
+      if (!res.ok) throw new Error("Delete failed");
+
+      // Remove comment from UI instantly
+      setCommentsByCard((prev) => ({
+        ...prev,
+        [String(cardId)]: prev[String(cardId)].filter(
+          (c) => c.id !== commentId,
+        ),
+      }));
+    } catch (err) {
+      alert("Error deleting comment");
+    }
+  }
+
+  async function updateComment(commentId, cardId) {
+    if (!editCommentValue.trim()) return alert("Comment cannot be empty");
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://localhost:8080/api/comments/${commentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            content: editCommentValue,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error("Update failed");
+
+      const updatedComment = await res.json();
+
+      // Update state instantly
+      setCommentsByCard((prev) => ({
+        ...prev,
+        [String(cardId)]: prev[String(cardId)].map((comment) =>
+          comment.id === commentId
+            ? { ...comment, content: updatedComment.content, message: updatedComment.content }
+            : comment,
+        ),
+      }));
+
+      setEditingCommentId(null);
+      setEditCommentValue("");
+    } catch (err) {
+      alert("Error updating comment");
+    }
+  }
 
   return (
     <div className="board-container">
@@ -424,17 +820,19 @@ function Board() {
             className="board-back-btn"
             onClick={() => navigate("/retroDashboard")}
           >
-            ← Back
+            Back
           </button>
           <h1 className="board-title">{board.title}</h1>
         </div>
 
-        <div className="board-header-right">
+        {/* ── Desktop controls (hidden on mobile) ── */}
+        <div className="board-header-right desktop-only">
           <button
             className="add-column-btn"
             onClick={() => setShowAddColumn(true)}
           >
-            + Add Column
+            <FiPlus size={14} />
+            <span className="btn-label">Add Column</span>
           </button>
           <div className="board-search-wrapper">
             <FiSearch className="board-search-icon" size={14} />
@@ -456,6 +854,17 @@ function Board() {
           </div>
           <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
+
+        {/* ── Mobile hamburger menu ── */}
+        <div className="mobile-only">
+          <MobileNavMenu
+            onAddColumn={() => setShowAddColumn(true)}
+            search={search}
+            setSearch={setSearch}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+          />
+        </div>
       </header>
 
       <main className="board-main">
@@ -469,11 +878,82 @@ function Board() {
               return (
                 <div key={colKey} className="board-column">
                   <div className="column-header">
-                    <h2 className="column-title">
-                      {column.title || column.name || "Untitled"}
-                    </h2>
-
-                    <button className="column-menu">⋮</button>
+                    {editingColumnId === column.id ? (
+                      <div className="column-edit-form">
+                        <input
+                          className="column-edit-input"
+                          type="text"
+                          value={editColumnTitle}
+                          onChange={(e) => setEditColumnTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") updateColumn(column.id);
+                            if (e.key === "Escape") {
+                              setEditingColumnId(null);
+                              setEditColumnTitle("");
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          className="column-save-btn"
+                          onClick={() => updateColumn(column.id)}
+                        >
+                          ✔
+                        </button>
+                        <button
+                          className="column-cancel-btn"
+                          onClick={() => {
+                            setEditingColumnId(null);
+                            setEditColumnTitle("");
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <h2 className="column-title">
+                          {column.title || column.name || "Untitled"}
+                        </h2>
+                        <span className="column-count-badge">
+                          {columnCards.length}
+                        </span>
+                        <div className="column-menu-wrapper" ref={openColumnMenu === column.id ? columnMenuRef : null}>
+                          <button
+                            className="column-menu"
+                            onClick={() =>
+                              setOpenColumnMenu(
+                                openColumnMenu === column.id ? null : column.id,
+                              )
+                            }
+                          >
+                            ⋮
+                          </button>
+                          {openColumnMenu === column.id && (
+                            <div className="column-dropdown-menu">
+                              <button
+                                className="column-dropdown-item"
+                                onClick={() => {
+                                  setEditingColumnId(column.id);
+                                  setEditColumnTitle(
+                                    column.title || column.name || "",
+                                  );
+                                  setOpenColumnMenu(null);
+                                }}
+                              >
+                                <span>✎</span> Edit Column
+                              </button>
+                              <button
+                                className="column-dropdown-item delete"
+                                onClick={() => deleteColumn(column.id)}
+                              >
+                                <span>✕</span> Delete Column
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="column-items">
@@ -505,14 +985,14 @@ function Board() {
                               }
                               disabled={savingCard}
                             >
-                              {savingCard ? "Saving..." : "Save"}
+                              {savingCard ? "Saving..." : "✔"}
                             </button>
                             <button
                               className="cancel-card-btn"
                               onClick={() => removeCardForm(form.formId)}
                               disabled={savingCard}
                             >
-                              Cancel
+                              ✕
                             </button>
                           </div>
                         </div>
@@ -533,7 +1013,74 @@ function Board() {
 
                       return (
                         <div key={cardKey} className="card-item">
-                          <p className="card-text">{card.content}</p>
+                          <div className="card-header-row">
+                            {editingCardId === realId ? (
+                              <div className="card-edit-wrapper">
+                                <textarea
+                                  className="card-textarea"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  autoFocus
+                                />
+                                <div className="card-form-buttons">
+                                  <button
+                                    className="save-card-btn"
+                                    onClick={() => updateCard(realId, column.id)}
+                                  >
+                                    ✔
+                                  </button>
+                                  <button
+                                    className="cancel-card-btn"
+                                    onClick={() => {
+                                      setEditingCardId(null);
+                                      setEditValue("");
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="card-text">{card.content}</p>
+                                <div className="card-menu-wrapper" ref={openCardMenu === cardKey ? cardMenuRef : null}>
+                                  <button
+                                    className="card-menu-btn"
+                                    onClick={() =>
+                                      setOpenCardMenu(
+                                        openCardMenu === cardKey ? null : cardKey,
+                                      )
+                                    }
+                                  >
+                                    ⋮
+                                  </button>
+                                  {openCardMenu === cardKey && (
+                                    <div className="card-dropdown-menu">
+                                      <button
+                                        className="card-dropdown-item"
+                                        onClick={() => {
+                                          setEditingCardId(realId);
+                                          setEditValue(card.content);
+                                          setOpenCardMenu(null);
+                                        }}
+                                      >
+                                        <span>✎</span> Edit Card
+                                      </button>
+                                      <button
+                                        className="card-dropdown-item delete"
+                                        onClick={() => {
+                                          deleteCard(realId);
+                                          setOpenCardMenu(null);
+                                        }}
+                                      >
+                                        <span>✕</span> Delete Card
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                           <div className="card-footer">
                             <button
                               className={`vote-btn ${votesByCard[String(realId)] ? "voted" : ""}`}
@@ -545,7 +1092,7 @@ function Board() {
                               }
                             >
                               <FiThumbsUp size={13} />
-                              <span>{card.votes || 0}</span>
+                              <span>{Number(card?.votes ?? 0)}</span>
                             </button>
                             <button
                               className="comment-btn"
@@ -608,9 +1155,72 @@ function Board() {
                                       key={c.id || i}
                                       className="comment-item"
                                     >
-                                      <div className="comment-content">
-                                        {c.message || c.content}
-                                      </div>
+                                      {editingCommentId === c.id ? (
+                                        <div className="comment-edit-form">
+                                          <textarea
+                                            className="comment-input"
+                                            value={editCommentValue}
+                                            onChange={(e) =>
+                                              setEditCommentValue(e.target.value)
+                                            }
+                                            autoFocus
+                                          />
+                                          <div className="comment-actions">
+                                            <button
+                                              className="cancel-card-btn"
+                                              onClick={() => {
+                                                setEditingCommentId(null);
+                                                setEditCommentValue("");
+                                              }}
+                                            >
+                                              ✕
+                                            </button>
+                                            <button
+                                              className="save-card-btn"
+                                              onClick={() =>
+                                                updateComment(c.id, realId)
+                                              }
+                                            >
+                                              Save
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="comment-content">
+                                            <div>{c.message || c.content}</div>
+                                            <div className="comment-written-by">
+                                              by
+                                              <br />
+                                              {name}
+                                            </div>
+                                          </div>
+                                          <div className="comment-buttons">
+                                            <button
+                                              className="edit-btn"
+                                              onClick={() => {
+                                                setEditingCommentId(c.id);
+                                                setEditCommentValue(
+                                                  c.message || c.content
+                                                );
+                                              }}
+                                              title="Edit comment"
+                                            >
+                                              ✎
+                                            </button>
+                                            <button
+                                              className="delete-btn"
+                                              onClick={() =>
+                                                c.id != null &&
+                                                deleteComment(c.id, realId)
+                                              }
+                                              title="Delete comment"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -629,6 +1239,8 @@ function Board() {
           )}
         </div>
       </main>
+
+      {/* ── Add Column Modal ── */}
       {showAddColumn && (
         <div className="modal-overlay" onClick={() => setShowAddColumn(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>

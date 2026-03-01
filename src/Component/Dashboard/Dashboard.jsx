@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import "./dashboard.css";
@@ -484,6 +484,7 @@ function TeamsTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadTeams();
@@ -515,10 +516,30 @@ function TeamsTab() {
             Manage your teams and collaborate with members
           </p>
         </div>
-        <button className="btn-create" onClick={() => setShowCreate(true)}>
-          <FiPlus size={15} style={{ marginRight: 6 }} />
-          Create Team
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="search-container">
+            <FiSearch className="search-icon" size={16} />
+            <input
+              type="search"
+              placeholder="Search teams..."
+              className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                className="search-clear"
+                onClick={() => setSearchQuery("")}
+              >
+                <FiX size={14} />
+              </button>
+            )}
+          </div>
+          <button className="btn-create" onClick={() => setShowCreate(true)}>
+            <FiPlus size={15} style={{ marginRight: 6 }} />
+            Create Team
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -559,20 +580,42 @@ function TeamsTab() {
         </div>
       )}
 
-      {!loading && !error && teams.length > 0 && (
-        <div className="cards-grid">
-          <button
-            className="dash-card dash-card--add"
-            onClick={() => setShowCreate(true)}
-          >
-            <div className="add-card-icon">+</div>
-            <div className="add-card-label">Create Team</div>
-          </button>
-          {teams.map((team, idx) => (
-            <TeamCard key={team.id} team={team} idx={idx} />
-          ))}
-        </div>
-      )}
+      {!loading && !error && teams.length > 0 && (() => {
+        const filteredTeams = teams.filter((team) => {
+          if (!searchQuery.trim()) return true;
+          const query = searchQuery.toLowerCase();
+          return (
+            team.name?.toLowerCase().includes(query) ||
+            team.members?.some(m => 
+              m.name?.toLowerCase().includes(query) ||
+              m.email?.toLowerCase().includes(query)
+            )
+          );
+        });
+
+        return (
+          <>
+            <div className="cards-grid">
+              <button
+                className="dash-card dash-card--add"
+                onClick={() => setShowCreate(true)}
+              >
+                <div className="add-card-icon">+</div>
+                <div className="add-card-label">Create Team</div>
+              </button>
+              {filteredTeams.map((team, idx) => (
+                <TeamCard key={team.id} team={team} idx={idx} />
+              ))}
+            </div>
+
+            {filteredTeams.length === 0 && searchQuery && (
+              <p className="empty-desc" style={{ marginTop: 16, textAlign: 'center' }}>
+                No teams match "{searchQuery}"
+              </p>
+            )}
+          </>
+        );
+      })()}
 
       {showCreate && (
         <CreateTeamModal
@@ -599,12 +642,30 @@ const NAV_TABS = [
 function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close drawer when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  function handleTabSelect(tab) {
+    setActiveTab(tab);
+    setMenuOpen(false);
+  }
 
   // Current user info
   const userName =
-    localStorage.getItem("userName") ||
-    localStorage.getItem("username") ||
-    "User";
+    localStorage.getItem("name") || localStorage.getItem("name") || "User";
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -625,6 +686,7 @@ function Dashboard() {
   const [userBoards, setUserBoards] = useState([]);
   const [loadingBoards, setLoadingBoards] = useState(false);
   const [boardsError, setBoardsError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ── Templates ──
   const [templates, setTemplates] = useState([]);
@@ -745,33 +807,63 @@ function Dashboard() {
   return (
     <div className="app dashboard-app">
       {/* Navbar */}
-      <header className="dash-navbar">
-        <div className="dash-nav-left">
-          <span className="dash-logo">SegmentoRetro</span>
-        </div>
-        <div className="nave-bar">
-          <nav className="dash-nav-center">
-            {NAV_TABS.map((tab) => (
-              <button
-                key={tab}
-                className={`dash-tab${activeTab === tab ? " active" : ""}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <div className="dash-nav-right">
-          <div className="nav-profile">
-            <div className="nav-avatar">{getInitials(userName)}</div>
-            <span className="nav-username">{userName}</span>
+      <div ref={menuRef}>
+        <header className="dash-navbar">
+          {/* LEFT: Hamburger (mobile) + Logo */}
+          <div className="dash-nav-left">
+            {/* Hamburger — shown only on small screens via CSS */}
+            <button
+              className={`nav-hamburger${menuOpen ? " open" : ""}`}
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Toggle navigation menu"
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <span className="dash-logo">SegmentoRetro</span>
           </div>
-          <button className="nav-logout-btn" onClick={handleLogout}>
-            Log out
-          </button>
-        </div>
-      </header>
+
+          {/* CENTER: Desktop tab bar (hidden on mobile via CSS) */}
+          <div className="nave-bar">
+            <nav className="dash-nav-center">
+              {NAV_TABS.map((tab) => (
+                <button
+                  key={tab}
+                  className={`dash-tab${activeTab === tab ? " active" : ""}`}
+                  onClick={() => handleTabSelect(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* RIGHT: Profile + Logout (always on right) */}
+          <div className="dash-nav-right">
+            <div className="nav-profile">
+              <div className="nav-avatar">{getInitials(userName)}</div>
+              <span className="nav-username">{userName}</span>
+            </div>
+            <button className="nav-logout-btn" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile drawer — slides in below navbar */}
+        <nav className={`dash-mobile-menu${menuOpen ? " open" : ""}`}>
+          {NAV_TABS.map((tab) => (
+            <button
+              key={tab}
+              className={`dash-tab${activeTab === tab ? " active" : ""}`}
+              onClick={() => handleTabSelect(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       <main className="dash-main">
         {activeTab === "Dashboard" && (
@@ -786,6 +878,24 @@ function Dashboard() {
                   </span>
                 )}
               </h1>
+              <div className="search-container">
+                <FiSearch className="search-icon" size={16} />
+                <input
+                  type="search"
+                  placeholder="Search boards..."
+                  className="search-input"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    className="search-clear"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <FiX size={14} />
+                  </button>
+                )}
+              </div>
             </div>
 
             {loadingBoards && (
@@ -808,31 +918,51 @@ function Dashboard() {
               </div>
             )}
 
-            {!loadingBoards && (
-              <div className="cards-grid">
-                <button
-                  type="button"
-                  className="dash-card dash-card--add"
-                  onClick={() => setShowCreateBoard(true)}
-                >
-                  <div className="add-card-icon">+</div>
-                  <div className="add-card-label">Add board</div>
-                </button>
-                {userBoards.map((board) => (
-                  <BoardCard
-                    key={board.id}
-                    board={board}
-                    onClick={() => navigate(`/board/${board.id}`)}
-                  />
-                ))}
-              </div>
-            )}
+            {!loadingBoards && (() => {
+              const filteredBoards = userBoards.filter((board) => {
+                if (!searchQuery.trim()) return true;
+                const query = searchQuery.toLowerCase();
+                return (
+                  board.title?.toLowerCase().includes(query) ||
+                  board.teamName?.toLowerCase().includes(query) ||
+                  board.templateName?.toLowerCase().includes(query)
+                );
+              });
 
-            {!loadingBoards && !boardsError && userBoards.length === 0 && (
-              <p className="empty-desc" style={{ marginTop: 8 }}>
-                No boards yet. Create your first board to get started!
-              </p>
-            )}
+              return (
+                <>
+                  <div className="cards-grid">
+                    <button
+                      type="button"
+                      className="dash-card dash-card--add"
+                      onClick={() => setShowCreateBoard(true)}
+                    >
+                      <div className="add-card-icon">+</div>
+                      <div className="add-card-label">Add board</div>
+                    </button>
+                    {filteredBoards.map((board) => (
+                      <BoardCard
+                        key={board.id}
+                        board={board}
+                        onClick={() => navigate(`/board/${board.id}`)}
+                      />
+                    ))}
+                  </div>
+
+                  {filteredBoards.length === 0 && searchQuery && (
+                    <p className="empty-desc" style={{ marginTop: 16, textAlign: 'center' }}>
+                      No boards match "{searchQuery}"
+                    </p>
+                  )}
+
+                  {filteredBoards.length === 0 && !searchQuery && userBoards.length === 0 && (
+                    <p className="empty-desc" style={{ marginTop: 8 }}>
+                      No boards yet. Create your first board to get started!
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
