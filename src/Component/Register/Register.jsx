@@ -9,6 +9,7 @@ function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("MEMBER");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +39,7 @@ function Register() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(
-            isLogin ? { email, password } : { name, email, password },
+            isLogin ? { email, password } : { name, email, password, role },
           ),
         },
       );
@@ -73,6 +74,10 @@ function Register() {
 
             if (payload.name) {
               localStorage.setItem("name", payload.name);
+            }
+
+            if (payload.role) {
+              localStorage.setItem("role", payload.role);
             }
           }
         } catch (e) {
@@ -122,21 +127,23 @@ function Register() {
 
           <form className="auth-form" onSubmit={handleSubmit}>
             {mode === "register" && (
-              <label className="auth-field">
-                <span>Name</span>
-                <div className="input-with-icon">
-                  <span className="input-icon" aria-hidden="true">
-                    <FiUser />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    required
-                  />
-                </div>
-              </label>
+              <>
+                <label className="auth-field">
+                  <span>Name</span>
+                  <div className="input-with-icon">
+                    <span className="input-icon" aria-hidden="true">
+                      <FiUser />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      required
+                    />
+                  </div>
+                </label>
+              </>
             )}
 
             <label className="auth-field">
@@ -180,6 +187,32 @@ function Register() {
                 </button>
               </div>
             </label>
+
+            {mode === "register" && (
+              <label className="auth-field">
+                <span>Role</span>
+                <select
+                  className="field-input"
+                  value={role}
+                  onChange={(event) => setRole(event.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    fontSize: "14px",
+                    border: "1px solid #e0e4ea",
+                    borderRadius: "8px",
+                    backgroundColor: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="VIEWER">Viewer</option>
+                </select>
+              </label>
+            )}
 
             {error ? <p className="auth-error">{error}</p> : null}
 

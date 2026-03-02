@@ -27,7 +27,52 @@ function Analytics() {
       );
       
       const data = await res.json().catch(() => []);
-      setBoards(Array.isArray(data) ? data : []);
+      const boardsArray = Array.isArray(data) ? data : [];
+      
+      // Calculate analytics for each board by fetching cards
+      const boardsWithAnalytics = await Promise.all(
+        boardsArray.map(async (board) => {
+          let cardCount = 0;
+          const contributors = new Set();
+          
+          try {
+            // Fetch cards for this board
+            const cardsRes = await fetch(
+              `http://localhost:8080/api/cards/board/${board.id}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+              }
+            );
+            
+            if (cardsRes.ok) {
+              const cards = await cardsRes.json().catch(() => []);
+              if (Array.isArray(cards)) {
+                cardCount = cards.length;
+                
+                // Collect unique user IDs who created cards
+                cards.forEach(card => {
+                  if (card.userId) {
+                    contributors.add(card.userId);
+                  }
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching cards for board ${board.id}:`, err);
+          }
+          
+          return {
+            ...board,
+            cardCount,
+            contributorCount: contributors.size || 1,
+          };
+        })
+      );
+      
+      setBoards(boardsWithAnalytics);
     } catch (err) {
       console.error("Error fetching analytics:", err);
     } finally {
@@ -67,16 +112,14 @@ function Analytics() {
                   <th>Created date</th>
                   <th>Last modified</th>
                   <th>Cards</th>
-                  <th>Votes</th>
                   <th>Contributors</th>
-                  <th>Viewers</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {boards.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="no-data">No boards found</td>
+                    <td colSpan="6" className="no-data">No boards found</td>
                   </tr>
                 ) : (
                   boards.map((board) => (
@@ -85,9 +128,7 @@ function Analytics() {
                       <td>{new Date(board.createdAt).toLocaleDateString()}</td>
                       <td>{new Date(board.updatedAt || board.createdAt).toLocaleDateString()}</td>
                       <td>{board.cardCount || 0}</td>
-                      <td>{board.voteCount || 0}</td>
                       <td>{board.contributorCount || 1}</td>
-                      <td>{board.viewerCount || 0}</td>
                       <td>
                         <button 
                           className="btn-view"

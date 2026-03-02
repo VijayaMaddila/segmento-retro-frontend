@@ -637,6 +637,175 @@
     width: 100%;
     justify-content: center;
   }
+
+  .landing-nav {
+    padding: 16px 20px;
+  }
+
+  .hero-section {
+    padding: 60px 20px;
+  }
+
+  .features-section,
+  .how-section,
+  .cta-section {
+    padding: 60px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-nav {
+    padding: 12px 16px;
+  }
+
+  .nav-logo {
+    font-size: 20px;
+  }
+
+  .nav-actions {
+    gap: 8px;
+  }
+
+  .btn-nav-login,
+  .btn-nav-signup {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .hero-section {
+    padding: 40px 16px;
+  }
+
+  .hero-badge {
+    font-size: 12px;
+    padding: 6px 14px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .hero-description {
+    font-size: 16px;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+
+  .features-section,
+  .how-section,
+  .cta-section {
+    padding: 48px 16px;
+  }
+
+  .features-title,
+  .how-title,
+  .cta-title {
+    font-size: 24px;
+  }
+
+  .features-subtitle,
+  .how-subtitle,
+  .cta-subtitle {
+    font-size: 14px;
+  }
+
+  .feature-card {
+    padding: 24px 20px;
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+
+  .feature-title {
+    font-size: 18px;
+  }
+
+  .feature-description {
+    font-size: 13px;
+  }
+
+  .step-card {
+    padding: 24px 20px;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .step-title {
+    font-size: 18px;
+  }
+
+  .step-description {
+    font-size: 13px;
+  }
+
+  .footer {
+    padding: 40px 16px 24px;
+  }
+
+  .footer-content {
+    gap: 32px;
+  }
+
+  .footer-brand {
+    font-size: 20px;
+  }
+
+  .footer-tagline {
+    font-size: 13px;
+  }
+
+  .footer-link-title {
+    font-size: 14px;
+  }
+
+  .footer-link {
+    font-size: 13px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero-title {
+    font-size: 24px;
+  }
+
+  .hero-description {
+    font-size: 15px;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .features-title,
+  .how-title,
+  .cta-title {
+    font-size: 22px;
+  }
+
+  .feature-card,
+  .step-card {
+    padding: 20px 16px;
+  }
 }
 
 /*ANIMATIONS*/

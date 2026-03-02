@@ -188,9 +188,17 @@ function CreateTeamModal({ onClose, onCreated }) {
   const [memberSearch, setMemberSearch] = useState("");
   const [allUsers, setAllUsers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [inviteEmails, setInviteEmails] = useState([]);
+  const [emailInput, setEmailInput] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  
+  // Board assignment states
+  const [unassignedBoards, setUnassignedBoards] = useState([]);
+  const [selectedBoards, setSelectedBoards] = useState([]);
+  const [loadingBoards, setLoadingBoards] = useState(false);
+  const [boardSearch, setBoardSearch] = useState("");
 
   useEffect(() => {
     setLoadingUsers(true);
@@ -199,7 +207,26 @@ function CreateTeamModal({ onClose, onCreated }) {
       .then((d) => setAllUsers(Array.isArray(d) ? d : []))
       .catch(() => setAllUsers([]))
       .finally(() => setLoadingUsers(false));
+    
+    // Fetch unassigned boards
+    fetchUnassignedBoards();
   }, []);
+
+  async function fetchUnassignedBoards() {
+    setLoadingBoards(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/boards/unassigned", {
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => []);
+      setUnassignedBoards(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching unassigned boards:", err);
+      setUnassignedBoards([]);
+    } finally {
+      setLoadingBoards(false);
+    }
+  }
 
   const filteredUsers = allUsers.filter(
     (u) =>
@@ -209,12 +236,52 @@ function CreateTeamModal({ onClose, onCreated }) {
         u.email?.toLowerCase().includes(memberSearch.toLowerCase())),
   );
 
+  const filteredBoards = unassignedBoards.filter(
+    (b) =>
+      !selectedBoards.find((sb) => sb.id === b.id) &&
+      (!boardSearch ||
+        b.title?.toLowerCase().includes(boardSearch.toLowerCase())),
+  );
+
   function addMember(user) {
     setSelectedMembers((p) => [...p, user]);
     setMemberSearch("");
   }
   function removeMember(id) {
     setSelectedMembers((p) => p.filter((m) => m.id !== id));
+  }
+
+  function addBoard(board) {
+    setSelectedBoards((p) => [...p, board]);
+    setBoardSearch("");
+  }
+  function removeBoard(id) {
+    setSelectedBoards((p) => p.filter((b) => b.id !== id));
+  }
+
+  function handleAddEmail(e) {
+    e.preventDefault();
+    const email = emailInput.trim();
+    if (!email) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (inviteEmails.includes(email)) {
+      setError("This email is already added");
+      return;
+    }
+
+    setInviteEmails((p) => [...p, email]);
+    setEmailInput("");
+    setError("");
+  }
+
+  function removeEmail(email) {
+    setInviteEmails((p) => p.filter((e) => e !== email));
   }
 
   async function handleSave() {
@@ -230,10 +297,47 @@ function CreateTeamModal({ onClose, onCreated }) {
           name: teamName.trim(),
           createdBy: userId ? Number(userId) : null,
           members: selectedMembers.map((m) => m.id),
+          boardIds: selectedBoards.map((b) => b.id), // Add board IDs
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || "Failed to create team");
+
+      if (inviteEmails.length > 0) {
+        try {
+          console.log("Sending invitations to:", inviteEmails);
+          console.log("Team ID:", data.id);
+          
+          const inviteRes = await fetch(`http://localhost:8080/api/teams/${data.id}/invite`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(inviteEmails),
+          });
+          
+          console.log("Invite response status:", inviteRes.status);
+          
+          if (!inviteRes.ok) {
+            const inviteData = await inviteRes.text().catch(() => "");
+            console.error("Invitation failed:", inviteData);
+            
+            if (inviteRes.status === 403) {
+              alert("Team created successfully, but you don't have permission to send invitations. Please contact your administrator.");
+            } else {
+              alert(`Team created successfully, but some email invitations failed: ${inviteData || "Unknown error"}`);
+            }
+          } else {
+            const inviteData = await inviteRes.text().catch(() => "");
+            console.log("Invitations sent successfully:", inviteData);
+            alert(`Team created successfully! Invitation emails sent to ${inviteEmails.length} recipient(s).`);
+          }
+        } catch (inviteErr) {
+          console.error("Error sending invitations:", inviteErr);
+          alert("Team created successfully, but failed to send invitation emails. Please try inviting members again later.");
+        }
+      } else {
+        alert("Team created successfully!");
+      }
+
       onCreated(data);
       onClose();
     } catch (err) {
@@ -257,7 +361,6 @@ function CreateTeamModal({ onClose, onCreated }) {
           </button>
         </header>
         <div className="modal-body">
-          {/* Team Name */}
           <label className="field-group">
             <span className="field-label">Team Name</span>
             <input
@@ -270,7 +373,6 @@ function CreateTeamModal({ onClose, onCreated }) {
             />
           </label>
 
-          {/* Members */}
           <div className="field-group">
             <span className="field-label">
               Add Members
@@ -281,7 +383,6 @@ function CreateTeamModal({ onClose, onCreated }) {
               )}
             </span>
 
-            {/* Search bar */}
             <div className="search-wrap">
               <FiSearch size={14} className="search-icon" />
               <input
@@ -301,6 +402,7 @@ function CreateTeamModal({ onClose, onCreated }) {
                 </button>
               )}
             </div>
+
             <div className="user-list">
               {loadingUsers ? (
                 <div className="user-list-empty">
@@ -336,7 +438,6 @@ function CreateTeamModal({ onClose, onCreated }) {
               )}
             </div>
 
-            {/* Selected member chips */}
             {selectedMembers.length > 0 && (
               <div className="selected-members">
                 <span className="selected-label">
@@ -351,6 +452,142 @@ function CreateTeamModal({ onClose, onCreated }) {
                         type="button"
                         className="chip-remove"
                         onClick={() => removeMember(m.id)}
+                      >
+                        <FiX size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="field-group">
+            <span className="field-label">Invite by Email</span>
+            <form onSubmit={handleAddEmail} style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="email"
+                className="field-input"
+                placeholder="Enter email address..."
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ padding: "8px 16px", whiteSpace: "nowrap" }}
+              >
+                Add Email
+              </button>
+            </form>
+
+            {inviteEmails.length > 0 && (
+              <div className="selected-members" style={{ marginTop: "12px" }}>
+                <span className="selected-label">
+                  Email Invitations ({inviteEmails.length})
+                </span>
+                <div className="chip-wrap">
+                  {inviteEmails.map((email) => (
+                    <div key={email} className="member-chip">
+                      <span className="chip-name">{email}</span>
+                      <button
+                        type="button"
+                        className="chip-remove"
+                        onClick={() => removeEmail(email)}
+                      >
+                        <FiX size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="field-group">
+            <span className="field-label">
+              Assign Boards (Optional)
+              {unassignedBoards.length > 0 && (
+                <span className="badge-muted">
+                  {unassignedBoards.length} unassigned boards
+                </span>
+              )}
+            </span>
+
+            <div className="search-wrap">
+              <FiSearch size={14} className="search-icon" />
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search boards..."
+                value={boardSearch}
+                onChange={(e) => setBoardSearch(e.target.value)}
+              />
+              {boardSearch && (
+                <button
+                  className="search-clear"
+                  type="button"
+                  onClick={() => setBoardSearch("")}
+                >
+                  <FiX size={12} />
+                </button>
+              )}
+            </div>
+
+            <div className="user-list">
+              {loadingBoards ? (
+                <div className="user-list-empty">
+                  <span className="spinner spinner--sm" />
+                  Loading boards...
+                </div>
+              ) : filteredBoards.length === 0 ? (
+                <div className="user-list-empty">
+                  {boardSearch
+                    ? `No boards match "${boardSearch}"`
+                    : unassignedBoards.length === 0
+                    ? "No unassigned boards available"
+                    : "All boards are already selected"}
+                </div>
+              ) : (
+                filteredBoards.map((board) => (
+                  <button
+                    key={board.id}
+                    type="button"
+                    className="user-list-item"
+                    onClick={() => addBoard(board)}
+                  >
+                    <span className="user-avatar" style={{ background: PALETTE[board.id % PALETTE.length].accent }}>
+                      {getInitials(board.title)}
+                    </span>
+                    <span className="user-info">
+                      <span className="user-name">{board.title}</span>
+                      {board.templateName && (
+                        <span className="user-email">{board.templateName}</span>
+                      )}
+                    </span>
+                    <span className="user-add-btn">+</span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {selectedBoards.length > 0 && (
+              <div className="selected-members">
+                <span className="selected-label">
+                  Selected Boards ({selectedBoards.length})
+                </span>
+                <div className="chip-wrap">
+                  {selectedBoards.map((b) => (
+                    <div key={b.id} className="member-chip">
+                      <span className="chip-avatar" style={{ background: PALETTE[b.id % PALETTE.length].accent }}>
+                        {getInitials(b.title)}
+                      </span>
+                      <span className="chip-name">{b.title}</span>
+                      <button
+                        type="button"
+                        className="chip-remove"
+                        onClick={() => removeBoard(b.id)}
                       >
                         <FiX size={11} />
                       </button>
@@ -383,6 +620,7 @@ function CreateTeamModal({ onClose, onCreated }) {
     </div>
   );
 }
+
 
 // SHARED CARD COMPONENT
 function BoardCard({ board, onClick, onDelete }) {
@@ -472,52 +710,22 @@ function BoardCard({ board, onClick, onDelete }) {
   );
 }
 
-function TeamCard({ team, idx, onDelete }) {
+function TeamCard({ team, idx, isDeleting }) {
   const { bg, accent } = PALETTE[idx % PALETTE.length];
   const memberCount = team.members?.length || 0;
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setShowMenu(false);
-      }
-    }
-    if (showMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMenu]);
 
   return (
-    <div className="dash-card" style={{ background: bg, position: "relative" }}>
+    <div 
+      className="dash-card" 
+      style={{ 
+        background: bg, 
+        position: "relative",
+        opacity: isDeleting ? 0.5 : 1,
+        pointerEvents: isDeleting ? 'none' : 'auto',
+        transition: 'opacity 0.3s ease'
+      }}
+    >
       <div className="dash-card-accent" style={{ background: accent }} />
-      <div className="card-menu-wrapper" ref={menuRef}>
-        <button
-          className="card-menu-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(!showMenu);
-          }}
-        >
-          ⋮
-        </button>
-        {showMenu && (
-          <div className="card-dropdown-menu">
-            <button
-              className="card-dropdown-item delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(false);
-                onDelete(team.id);
-              }}
-            >
-              <span>✕</span> Delete Team
-            </button>
-          </div>
-        )}
-      </div>
       <div className="dash-card-body">
         <div className="dash-card-avatar" style={{ background: accent }}>
           {getInitials(team.name)}
@@ -562,10 +770,17 @@ function TeamsTab() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 18;
 
   useEffect(() => {
     loadTeams();
   }, []);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   async function loadTeams() {
     setLoading(true);
@@ -581,38 +796,6 @@ function TeamsTab() {
       setError(err.message || "Failed to load teams");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleDeleteTeam(teamId) {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this team? This action cannot be undone.",
-    );
-    if (!confirmDelete) return;
-
-    try {
-      console.log("Deleting team:", teamId);
-      const res = await fetch(`http://localhost:8080/api/teams/${teamId}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-
-      console.log("Delete response status:", res.status);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.error("Delete failed:", data);
-        throw new Error(data.message || "Failed to delete team");
-      }
-
-      const responseData = await res.json().catch(() => null);
-      console.log("Delete successful:", responseData);
-      setTeams((prev) => prev.filter((t) => t.id !== teamId));
-
-      alert("Team deleted successfully!");
-    } catch (err) {
-      console.error("Error deleting team:", err);
-      alert("Error deleting team: " + (err.message || "Unknown"));
     }
   }
 
@@ -706,25 +889,54 @@ function TeamsTab() {
             );
           });
 
+          // Pagination logic
+          const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          const paginatedTeams = filteredTeams.slice(startIndex, endIndex);
+
           return (
             <>
               <div className="cards-grid">
-                <button
-                  className="dash-card dash-card--add"
-                  onClick={() => setShowCreate(true)}
-                >
-                  <div className="add-card-icon">+</div>
-                  <div className="add-card-label">Create Team</div>
-                </button>
-                {filteredTeams.map((team, idx) => (
+                {currentPage === 1 && (
+                  <button
+                    className="dash-card dash-card--add"
+                    onClick={() => setShowCreate(true)}
+                  >
+                    <div className="add-card-icon">+</div>
+                    <div className="add-card-label">Create Team</div>
+                  </button>
+                )}
+                {paginatedTeams.map((team, idx) => (
                   <TeamCard
                     key={team.id}
                     team={team}
-                    idx={idx}
-                    onDelete={handleDeleteTeam}
+                    idx={startIndex + idx}
                   />
                 ))}
               </div>
+
+              {filteredTeams.length > itemsPerPage && (
+                <div className="pagination">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ← Previous
+                  </button>
+                  <div className="pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
 
               {filteredTeams.length === 0 && searchQuery && (
                 <p
@@ -779,6 +991,13 @@ function Dashboard() {
       navigate("/analytics");
       return;
     }
+    
+    // Only MEMBER role is restricted to Dashboard
+    if (userRole === "MEMBER" && tab !== "Dashboard") {
+      alert("You don't have permission to access this section. Members can only view boards.");
+      return;
+    }
+    
     setActiveTab(tab);
     setMenuOpen(false);
   }
@@ -786,12 +1005,21 @@ function Dashboard() {
   // Current user info
   const userName =
     localStorage.getItem("name") || localStorage.getItem("name") || "User";
+  const userRole = localStorage.getItem("role") || "MEMBER";
+  
+  // Debug logging for role
+  useEffect(() => {
+    console.log("Dashboard - User Role:", userRole);
+    console.log("Dashboard - User Name:", userName);
+  }, [userRole, userName]);
 
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     localStorage.removeItem("userName");
     localStorage.removeItem("username");
+    localStorage.removeItem("name");
+    localStorage.removeItem("role");
     navigate("/login");
   }
 
@@ -807,6 +1035,8 @@ function Dashboard() {
   const [loadingBoards, setLoadingBoards] = useState(false);
   const [boardsError, setBoardsError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 18;
 
   // ── Templates ──
   const [templates, setTemplates] = useState([]);
@@ -826,12 +1056,19 @@ function Dashboard() {
     fetchUserBoards();
   }, []);
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   async function fetchUserBoards() {
     const userId = localStorage.getItem("userId");
+    const userRole = localStorage.getItem("role") || "MEMBER";
     if (!userId) return;
     setLoadingBoards(true);
     setBoardsError("");
     try {
+      // All roles use the same endpoint - backend filters based on role and team membership
       const res = await fetch(
         `http://localhost:8080/api/boards/user/${userId}`,
         {
@@ -849,6 +1086,7 @@ function Dashboard() {
   }
 
   async function handleDeleteBoard(boardId) {
+    const userRole = localStorage.getItem("role") || "MEMBER";
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this board? All columns and cards will be permanently deleted.",
     );
@@ -976,15 +1214,21 @@ function Dashboard() {
           </div>
           <div className="nave-bar">
             <nav className="dash-nav-center">
-              {NAV_TABS.map((tab) => (
-                <button
-                  key={tab}
-                  className={`dash-tab${activeTab === tab ? " active" : ""}`}
-                  onClick={() => handleTabSelect(tab)}
-                >
-                  {tab}
-                </button>
-              ))}
+              {NAV_TABS.map((tab) => {
+                // Hide non-Dashboard tabs for MEMBER role
+                if (userRole === "MEMBER" && tab !== "Dashboard") {
+                  return null;
+                }
+                return (
+                  <button
+                    key={tab}
+                    className={`dash-tab${activeTab === tab ? " active" : ""}`}
+                    onClick={() => handleTabSelect(tab)}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
             </nav>
           </div>
           <div className="dash-nav-right">
@@ -998,15 +1242,21 @@ function Dashboard() {
           </div>
         </header>
         <nav className={`dash-mobile-menu${menuOpen ? " open" : ""}`}>
-          {NAV_TABS.map((tab) => (
-            <button
-              key={tab}
-              className={`dash-tab${activeTab === tab ? " active" : ""}`}
-              onClick={() => handleTabSelect(tab)}
-            >
-              {tab}
-            </button>
-          ))}
+          {NAV_TABS.map((tab) => {
+            // Hide non-Dashboard tabs for MEMBER role
+            if (userRole === "MEMBER" && tab !== "Dashboard") {
+              return null;
+            }
+            return (
+              <button
+                key={tab}
+                className={`dash-tab${activeTab === tab ? " active" : ""}`}
+                onClick={() => handleTabSelect(tab)}
+              >
+                {tab}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -1075,18 +1325,26 @@ function Dashboard() {
                   );
                 });
 
+                // Pagination logic
+                const totalPages = Math.ceil(filteredBoards.length / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+                const paginatedBoards = filteredBoards.slice(startIndex, endIndex);
+
                 return (
                   <>
                     <div className="cards-grid">
-                      <button
-                        type="button"
-                        className="dash-card dash-card--add"
-                        onClick={() => setShowCreateBoard(true)}
-                      >
-                        <div className="add-card-icon">+</div>
-                        <div className="add-card-label">Add board</div>
-                      </button>
-                      {filteredBoards.map((board) => (
+                      {(userRole === "ADMIN" || userRole === "MANAGER") && currentPage === 1 && (
+                        <button
+                          type="button"
+                          className="dash-card dash-card--add"
+                          onClick={() => setShowCreateBoard(true)}
+                        >
+                          <div className="add-card-icon">+</div>
+                          <div className="add-card-label">Add board</div>
+                        </button>
+                      )}
+                      {paginatedBoards.map((board) => (
                         <BoardCard
                           key={board.id}
                           board={board}
@@ -1095,6 +1353,28 @@ function Dashboard() {
                         />
                       ))}
                     </div>
+
+                    {filteredBoards.length > itemsPerPage && (
+                      <div className="pagination">
+                        <button
+                          className="pagination-btn"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          ← Previous
+                        </button>
+                        <div className="pagination-info">
+                          Page {currentPage} of {totalPages}
+                        </div>
+                        <button
+                          className="pagination-btn"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
 
                     {filteredBoards.length === 0 && searchQuery && (
                       <p
@@ -1108,9 +1388,20 @@ function Dashboard() {
                     {filteredBoards.length === 0 &&
                       !searchQuery &&
                       userBoards.length === 0 && (
-                        <p className="empty-desc" style={{ marginTop: 8 }}>
-                          No boards yet. Create your first board to get started!
-                        </p>
+                        <div className="empty-state">
+                          {userRole === "MEMBER" ? (
+                            <>
+                              <h3 className="empty-title">No boards assigned yet</h3>
+                              <p className="empty-desc">
+                                You haven't been assigned to any boards yet. Please wait for your team administrator to add you to a board, or contact them for access.
+                              </p>
+                            </>
+                          ) : (
+                            <p className="empty-desc" style={{ marginTop: 8 }}>
+                              No boards yet. Create your first board to get started!
+                            </p>
+                          )}
+                        </div>
                       )}
                   </>
                 );

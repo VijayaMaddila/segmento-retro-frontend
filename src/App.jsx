@@ -4,6 +4,8 @@ import Register from "./Component/Register/Register";
 import Dashboard from "./Component/Dashboard/Dashboard";
 import Board from "./Component/Board/Board";
 import Analytics from "./Component/Analytics/Analytics";
+import JoinPage from "./Component/Join/JoinPage";
+import MagicLogin from "./Component/MagicLogin/MagicLogin";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -17,6 +19,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Register />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/magic-login" element={<MagicLogin />} />
         <Route
           path="/retroDashboard"
           element={
@@ -41,6 +44,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/join" element={<JoinPage />} />
       </Routes>
     </BrowserRouter>
   );

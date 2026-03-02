@@ -15,8 +15,6 @@ import "./board.css";
 
 const SORT_OPTIONS = [
   { value: "default", label: "Default Order" },
-  { value: "votes_desc", label: "Most Votes" },
-  { value: "votes_asc", label: "Least Votes" },
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
   { value: "az", label: "A → Z" },
@@ -30,12 +28,6 @@ function applySortAndSearch(cards, search, sort) {
     result = result.filter((c) => (c.content || "").toLowerCase().includes(q));
   }
   switch (sort) {
-    case "votes_desc":
-      result.sort((a, b) => (b.votes || 0) - (a.votes || 0));
-      break;
-    case "votes_asc":
-      result.sort((a, b) => (a.votes || 0) - (b.votes || 0));
-      break;
     case "newest":
       result.sort((a, b) => (b.id || 0) - (a.id || 0));
       break;
@@ -103,7 +95,7 @@ function MobileNavMenu({
   setSearch,
   sortBy,
   setSortBy,
-  isCreator,
+  canManageBoard,
 }) {
   const [open, setOpen] = useState(false);
   const [showSortSub, setShowSortSub] = useState(false);
@@ -220,7 +212,7 @@ function MobileNavMenu({
             <div className="mobile-dropdown-divider" />
 
             {/* Add Column */}
-            {isCreator && (
+            {canManageBoard && (
               <button
                 className="mobile-dropdown-item primary"
                 onClick={() => {
@@ -275,7 +267,12 @@ function Board() {
   const [commentsByCard, setCommentsByCard] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [postingCommentCard, setPostingCommentCard] = useState(null);
-  const [votesByCard, setVotesByCard] = useState({});
+  
+  // Voting state
+  const [userVotesByCard, setUserVotesByCard] = useState({}); // {cardId: voteCount}
+  const [remainingVotes, setRemainingVotes] = useState(6);
+  const [cardVoteCounts, setCardVoteCounts] = useState({}); // {cardId: totalCount}
+  
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentValue, setEditCommentValue] = useState("");
 
@@ -289,8 +286,9 @@ function Board() {
 
   const name = localStorage.getItem("name" || "userName");
   const currentUserId = localStorage.getItem("userId");
+  const userRole = localStorage.getItem("role") || "MEMBER";
 
-  // Check if current user is the board creator
+  // Check if current user is the board creator OR is an ADMIN
   // Handle both direct ID and nested object cases
   const isCreator = board && currentUserId && (
     String(board.userId) === String(currentUserId) ||
@@ -300,18 +298,23 @@ function Board() {
     String(board.user_id) === String(currentUserId) ||
     String(board.created_by) === String(currentUserId)
   );
+  
+  // ADMIN can do everything on any board
+  const canManageBoard = userRole === "ADMIN" || isCreator;
 
   // Debug logging (remove after testing)
   useEffect(() => {
     if (board) {
       console.log("Board data:", board);
       console.log("Current user ID:", currentUserId);
+      console.log("User role:", userRole);
       console.log("Board userId:", board.userId);
       console.log("Board createdBy:", board.createdBy);
       console.log("Board createdBy.id:", board.createdBy?.id);
       console.log("Is creator:", isCreator);
+      console.log("Can manage board:", canManageBoard);
     }
-  }, [board, currentUserId, isCreator]);
+  }, [board, currentUserId, isCreator, userRole, canManageBoard]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -330,6 +333,14 @@ function Board() {
     fetchBoard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
+
+  // Fetch voting info when board and cards are loaded
+  useEffect(() => {
+    if (board && board.id && Object.keys(cards).length > 0) {
+      fetchUserVotingInfo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, cards]);
 
   useEffect(() => {
     try {
@@ -421,6 +432,259 @@ function Board() {
     }
   }
 
+  // Fetch user's voting info for the board
+  async function fetchUserVotingInfo() {
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    if (!userId || !boardId) return;
+
+    console.log("=== FETCHING VOTES ===");
+    console.log("BoardId:", boardId, "UserId:", userId);
+
+    try {
+      // Get remaining votes
+      const remainingRes = await fetch(
+        `http://localhost:8080/api/votes/board/${boardId}/user/${userId}/remaining`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      
+      console.log("Remaining votes response status:", remainingRes.status);
+      
+      if (remainingRes.ok) {
+        const data = await remainingRes.json();
+        console.log("Remaining votes data:", data);
+        setRemainingVotes(data.remaining || 6);
+      }
+
+      // Get all board votes to update card counts
+      const boardVotesRes = await fetch(
+        `http://localhost:8080/api/votes/board/${boardId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      console.log("Board votes response status:", boardVotesRes.status);
+
+      if (boardVotesRes.ok) {
+        const votesData = await boardVotesRes.json();
+        console.log("Board votes data:", votesData);
+        
+        const voteCounts = {};
+        const userVoteCounts = {};
+        
+        if (Array.isArray(votesData)) {
+          console.log("Processing", votesData.length, "vote records");
+          
+          votesData.forEach(vote => {
+            console.log("Vote record:", vote);
+            
+            // Count total votes per card
+            const cardId = vote.cardId || vote.card_id;
+            if (cardId) {
+              voteCounts[cardId] = (voteCounts[cardId] || 0) + 1;
+            }
+            
+            // Count user's votes per card
+            const voteUserId = vote.userId || vote.user_id;
+            if (voteUserId === parseInt(userId, 10) && cardId) {
+              userVoteCounts[cardId] = (userVoteCounts[cardId] || 0) + 1;
+            }
+          });
+          
+          console.log("Final vote counts:", voteCounts);
+          console.log("Final user vote counts:", userVoteCounts);
+        } else {
+          console.warn("Votes data is not an array:", votesData);
+        }
+        
+        setCardVoteCounts(voteCounts);
+        setUserVotesByCard(userVoteCounts);
+      } else {
+        const errorText = await boardVotesRes.text();
+        console.error("Failed to fetch board votes:", errorText);
+      }
+      
+      console.log("=== END FETCHING VOTES ===");
+    } catch (err) {
+      console.error("Error fetching voting info:", err);
+    }
+  }
+
+  // Add vote to a card (can vote multiple times)
+  async function addVote(cardId) {
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    if (!userId) return alert("You must be logged in to vote");
+
+    if (remainingVotes <= 0) {
+      return alert("You have used all your votes!");
+    }
+
+    // Ensure all IDs are numbers
+    const cardIdNum = parseInt(cardId, 10);
+    const userIdNum = parseInt(userId, 10);
+    const boardIdNum = parseInt(boardId, 10);
+
+    console.log("=== VOTE DEBUG ===");
+    console.log("CardId:", cardIdNum, "UserId:", userIdNum, "BoardId:", boardIdNum);
+    console.log("Token present:", !!token);
+
+    // Try different endpoint formats based on backend documentation
+    // Format 1: POST /api/votes with body
+    const url1 = `http://localhost:8080/api/votes`;
+    const body1 = { cardId: cardIdNum, userId: userIdNum, boardId: boardIdNum };
+    
+    // Format 2: POST /api/votes/card/{cardId}/user/{userId} (from earlier backend docs)
+    const url2 = `http://localhost:8080/api/votes/card/${cardIdNum}/user/${userIdNum}`;
+    const body2 = { boardId: boardIdNum };
+
+    // Try Format 1 first
+    console.log("Trying Format 1 - URL:", url1);
+    console.log("Trying Format 1 - Body:", body1);
+
+    try {
+      let res = await fetch(url1, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body1),
+      });
+
+      console.log("Format 1 response status:", res.status);
+
+      // If Format 1 fails with 400 or 404, try Format 2
+      if (!res.ok && (res.status === 400 || res.status === 404)) {
+        console.log("Format 1 failed, trying Format 2 - URL:", url2);
+        console.log("Format 2 - Body:", body2);
+        
+        res = await fetch(url2, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(body2),
+        });
+        
+        console.log("Format 2 response status:", res.status);
+      }
+
+      // Get response text
+      const responseText = await res.text();
+      console.log("Vote response body:", responseText);
+
+      if (res.ok) {
+        let data = {};
+        try {
+          data = responseText ? JSON.parse(responseText) : {};
+        } catch (e) {
+          console.log("Response is not JSON, treating as success");
+        }
+        console.log("Vote added successfully:", data);
+        
+        // Update local state - increment counts
+        setUserVotesByCard(prev => ({
+          ...prev,
+          [cardId]: (prev[cardId] || 0) + 1
+        }));
+        setRemainingVotes(prev => prev - 1);
+        setCardVoteCounts(prev => ({
+          ...prev,
+          [cardId]: (prev[cardId] || 0) + 1
+        }));
+      } else {
+        console.error("Vote failed - Status:", res.status);
+        console.error("Vote failed - Response:", responseText);
+        
+        // Try to parse error message
+        let errorMessage = `Failed to add vote (${res.status})`;
+        try {
+          const error = JSON.parse(responseText);
+          console.error("Vote failed - Parsed error:", error);
+          errorMessage = error.message || error.error || errorMessage;
+        } catch {
+          if (responseText) {
+            errorMessage = responseText;
+          }
+        }
+        
+        alert(errorMessage);
+      }
+      console.log("=== END VOTE DEBUG ===");
+    } catch (err) {
+      console.error("Error adding vote:", err);
+      console.error("Error stack:", err.stack);
+      alert("Failed to add vote: " + err.message);
+    }
+  }
+
+  // Remove one vote from a card
+  async function removeVote(cardId) {
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
+    if (!userId) return alert("You must be logged in to vote");
+
+    const userVoteCount = userVotesByCard[cardId] || 0;
+    if (userVoteCount === 0) {
+      return alert("You haven't voted on this card");
+    }
+
+    // Ensure all IDs are numbers
+    const voteData = {
+      cardId: parseInt(cardId, 10),
+      userId: parseInt(userId, 10),
+    };
+
+    console.log("Removing vote:", voteData);
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/votes`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(voteData),
+      });
+
+      console.log("Remove vote response status:", res.status);
+
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.log("Vote removed successfully:", data);
+        
+        // Update local state - decrement counts
+        setUserVotesByCard(prev => ({
+          ...prev,
+          [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
+        }));
+        setRemainingVotes(prev => prev + 1);
+        setCardVoteCounts(prev => ({
+          ...prev,
+          [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
+        }));
+      } else {
+        const error = await res.json().catch(() => ({ message: "Unknown error" }));
+        console.error("Remove vote failed:", error);
+        alert(error.message || "Failed to remove vote");
+      }
+    } catch (err) {
+      console.error("Error removing vote:", err);
+      alert("Failed to remove vote: " + err.message);
+    }
+  }
+
   function addCardForm(columnId) {
     const formId = Date.now() + Math.random();
     setCardForms((prev) => [...prev, { formId, columnId, input: "" }]);
@@ -467,8 +731,8 @@ function Board() {
   }
 
   async function addColumn() {
-    if (!isCreator) {
-      return alert("Only the board creator can add columns");
+    if (!canManageBoard) {
+      return alert("Only the board creator or admin can add columns");
     }
     if (!newColumnTitle.trim()) return alert("Please enter a column title");
     setAddingColumn(true);
@@ -505,8 +769,8 @@ function Board() {
   }
 
   async function updateColumn(columnId) {
-    if (!isCreator) {
-      return alert("Only the board creator can edit columns");
+    if (!canManageBoard) {
+      return alert("Only the board creator or admin can edit columns");
     }
     if (!editColumnTitle.trim()) return alert("Column title cannot be empty");
 
@@ -554,8 +818,8 @@ function Board() {
   }
 
   async function deleteColumn(columnId) {
-    if (!isCreator) {
-      return alert("Only the board creator can delete columns");
+    if (!canManageBoard) {
+      return alert("Only the board creator or admin can delete columns");
     }
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this column? All cards in this column will also be deleted.",
@@ -588,62 +852,6 @@ function Board() {
       setOpenColumnMenu(null);
     } catch (err) {
       alert("Error deleting column: " + (err.message || "Unknown"));
-    }
-  }
-
-  async function castVote(cardId) {
-    const userId = localStorage.getItem("userId");
-    if (!userId) return alert("You must be logged in to vote");
-    const key = String(cardId);
-    const alreadyVoted = votesByCard[key];
-    setVotesByCard((p) => ({ ...p, [key]: !alreadyVoted }));
-    setCards((prev) => {
-      const updated = {};
-
-      for (const colId in prev) {
-        const columnCards = Array.isArray(prev[colId]) ? prev[colId] : [];
-
-        updated[colId] = columnCards.map((c) => {
-          if (!c || c.id == null) return c;
-
-          if (String(c.id) === key) {
-            const currentVotes = Number(c.votes) || 0;
-            return {
-              ...c,
-              votes: currentVotes + (alreadyVoted ? -1 : 1),
-            };
-          }
-
-          return c;
-        });
-      }
-
-      return updated;
-    });
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8080/api/votes/card/${cardId}/user/${userId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            cardId: Number(cardId),
-            userId: Number(userId),
-          }),
-        },
-      );
-      if (!res.ok) {
-        setVotesByCard((p) => ({ ...p, [key]: alreadyVoted }));
-        await fetchAllCards(localStorage.getItem("token"), columns);
-      }
-    } catch (err) {
-      setVotesByCard((p) => ({ ...p, [key]: alreadyVoted }));
-      await fetchAllCards(localStorage.getItem("token"), columns);
-      console.error("Vote error:", err);
     }
   }
 
@@ -717,8 +925,8 @@ function Board() {
     );
 
   async function deleteBoard() {
-    if (!isCreator) {
-      return alert("Only the board creator can delete the board");
+    if (!canManageBoard) {
+      return alert("Only the board creator or admin can delete the board");
     }
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this board? All columns and cards will be permanently deleted.",
@@ -898,7 +1106,7 @@ function Board() {
             setSearch={setSearch}
             sortBy={sortBy}
             setSortBy={setSortBy}
-            isCreator={isCreator}
+            canManageBoard={canManageBoard}
           />
         </div>
 
@@ -908,7 +1116,7 @@ function Board() {
 
         {/* ── Desktop controls (hidden on mobile) ── */}
         <div className="board-header-right desktop-only">
-          {isCreator && (
+          {canManageBoard && (
             <button
               className="add-column-btn"
               onClick={() => setShowAddColumn(true)}
@@ -942,6 +1150,15 @@ function Board() {
       {/* Board Title Section */}
       <div className="board-title-section">
         <h1 className="board-page-title">{board.title}</h1>
+        <div className="vote-counter">
+          <span className="vote-counter-label">Votes Remaining:</span>
+          <span className={`vote-counter-value ${remainingVotes === 0 ? 'vote-limit-reached' : ''}`}>
+            {remainingVotes} / 6
+          </span>
+          {remainingVotes === 0 && (
+            <span className="vote-counter-warning">⚠️ No votes left</span>
+          )}
+        </div>
       </div>
 
       <main className="board-main">
@@ -992,7 +1209,7 @@ function Board() {
                         <h2 className="column-title">
                           {column.title || column.name || "Untitled"}
                         </h2>
-                        {isCreator && (
+                        {canManageBoard && (
                           <div
                             className="column-menu-wrapper"
                             ref={
@@ -1178,18 +1395,31 @@ function Board() {
                             )}
                           </div>
                           <div className="card-footer">
-                            <button
-                              className={`vote-btn ${votesByCard[String(realId)] ? "voted" : ""}`}
-                              onClick={() => realId != null && castVote(realId)}
-                              title={
-                                votesByCard[String(realId)]
-                                  ? "Remove vote"
-                                  : "Vote"
-                              }
-                            >
-                              <FiThumbsUp size={13} />
-                              <span>{Number(card?.votes ?? 0)}</span>
-                            </button>
+                            {/* Vote Buttons */}
+                            <div className="vote-controls">
+                              <button
+                                className="vote-btn"
+                                onClick={() => realId != null && addVote(realId)}
+                                disabled={remainingVotes <= 0}
+                                title={remainingVotes <= 0 ? "No votes remaining" : "Add vote"}
+                              >
+                                <FiThumbsUp size={13} />
+                                <span>{cardVoteCounts[realId] || 0}</span>
+                              </button>
+                              
+                              {/* Show remove button if user has voted on this card */}
+                              {userVotesByCard[realId] > 0 && (
+                                <button
+                                  className="remove-vote-btn"
+                                  onClick={() => realId != null && removeVote(realId)}
+                                  title={`Remove vote (you have ${userVotesByCard[realId]} vote${userVotesByCard[realId] > 1 ? 's' : ''} on this card)`}
+                                >
+                                  −
+                                </button>
+                              )}
+                            </div>
+                            
+                            {/* Comment Button */}
                             <button
                               className="comment-btn"
                               onClick={async () => {
