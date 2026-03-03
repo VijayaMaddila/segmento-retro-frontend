@@ -1111,6 +1111,15 @@ function Board() {
         </div>
 
         <div className="board-header-left">
+          {userRole === "MEMBER" && (
+            <button 
+              className="back-to-dashboard-btn"
+              onClick={() => navigate('/retroDashboard')}
+              title="Back to Dashboard"
+            >
+              ← Dashboard
+            </button>
+          )}
           <div className="board-logo">SegmentoRetro</div>
         </div>
 

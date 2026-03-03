@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
+import TemplateSelector from "../../components/TemplateSelector";
+import { templateService } from "../../api";
 import "./dashboard.css";
 
 //Shared helpers
@@ -49,12 +51,29 @@ const PALETTE = [
 // CREATE TEMPLATE MODAL
 function CreateTemplateModal({ onClose, onCreated }) {
   const [templateName, setTemplateName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Retrospective");
+  const [language, setLanguage] = useState("English");
   const [columns, setColumns] = useState([
     { uid: 1, name: "" },
     { uid: 2, name: "" },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const categories = [
+    "Retrospective",
+    "Brainstorm",
+    "Team building",
+    "Design thinking / UX",
+    "Project management",
+    "Product management",
+    "Icebreakers",
+    "Personal",
+    "Decision making",
+  ];
+
+  const languages = ["English", "Portuguese", "Spanish", "French"];
 
   function addColumn() {
     setColumns((p) => [...p, { uid: Date.now() + Math.random(), name: "" }]);
@@ -72,6 +91,7 @@ function CreateTemplateModal({ onClose, onCreated }) {
   async function handleSave() {
     setError("");
     if (!templateName.trim()) return setError("Please enter a template name.");
+    if (!description.trim()) return setError("Please enter a description.");
     const filled = columns.filter((c) => c.name.trim());
     if (!filled.length) return setError("Please add at least one column.");
     setSaving(true);
@@ -81,9 +101,12 @@ function CreateTemplateModal({ onClose, onCreated }) {
         headers: authHeaders(),
         body: JSON.stringify({
           title: templateName.trim(),
+          description: description.trim(),
+          category: category,
+          language: language,
           columns: filled.map((c, i) => ({
             name: c.name.trim(),
-            position: i + 1,
+            position: i,
           })),
         }),
       });
@@ -122,6 +145,47 @@ function CreateTemplateModal({ onClose, onCreated }) {
               onChange={(e) => setTemplateName(e.target.value)}
               autoFocus
             />
+          </label>
+
+          <label className="field-group">
+            <span className="field-label">Description</span>
+            <textarea
+              className="field-input"
+              rows="3"
+              placeholder="Describe what this template is for..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
+
+          <label className="field-group">
+            <span className="field-label">Category</span>
+            <select
+              className="field-input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="field-group">
+            <span className="field-label">Language</span>
+            <select
+              className="field-input"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              {languages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="field-group">
@@ -1026,6 +1090,7 @@ function Dashboard() {
   // ── Board creation ──
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [boardTitle, setBoardTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [boardError, setBoardError] = useState("");
@@ -1193,6 +1258,58 @@ function Dashboard() {
       setBoardError(err.message || "Something went wrong");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleTemplateSelect(template) {
+    // Close template selector and set the selected template
+    setShowTemplateSelector(false);
+    setSelectedTemplate(template);
+    
+    // Pre-fill board title with template title if empty
+    if (!boardTitle) {
+      setBoardTitle(template.title);
+    }
+    
+    // Show the create board modal so user can confirm/edit name and select team
+    setShowCreateBoard(true);
+  }
+
+  async function handleCreateBoardWithTemplate(e) {
+    e.preventDefault();
+    
+    // If a template is selected, use the template service
+    if (selectedTemplate) {
+      setBoardError("");
+      setCreating(true);
+      
+      try {
+        const userId = localStorage.getItem("userId");
+        
+        // Pass the full template object to avoid 403 error on template fetch
+        const result = await templateService.createBoardFromTemplate(selectedTemplate, {
+          title: boardTitle,
+          userId: userId ? Number(userId) : undefined,
+          teamId: selectedTeam?.id,
+        });
+
+        if (result.ok) {
+          setBoardTitle("");
+          setSelectedTemplate(null);
+          setShowCreateBoard(false);
+          fetchUserBoards();
+          if (result.data.id) navigate(`/board/${result.data.id}`);
+        } else {
+          throw new Error(result.message || 'Failed to create board from template');
+        }
+      } catch (err) {
+        setBoardError(err.message || "Failed to create board from template");
+      } finally {
+        setCreating(false);
+      }
+    } else {
+      // Regular board creation without template service
+      handleCreateBoard(e);
     }
   }
 
@@ -1434,7 +1551,7 @@ function Dashboard() {
                 ×
               </button>
             </header>
-            <form className="modal-body" onSubmit={handleCreateBoard}>
+            <form className="modal-body" onSubmit={handleCreateBoardWithTemplate}>
               <label className="field-group">
                 <span className="field-label">Name</span>
                 <input
@@ -1486,19 +1603,30 @@ function Dashboard() {
                   <button
                     type="button"
                     className="link-btn"
+                    onClick={async () => {
+                      await ensureTeamsLoaded();
+                      setShowTemplateSelector(true);
+                      setShowCreateBoard(false);
+                    }}
+                  >
+                    Browse templates
+                  </button>
+                  <button
+                    type="button"
+                    className="link-btn"
                     onClick={() => {
                       setShowTemplateList((p) => !p);
                       ensureTemplatesLoaded();
                     }}
                   >
-                    Change template
+                    Quick select
                   </button>
                   <button
                     type="button"
                     className="link-btn"
                     onClick={() => setShowCreateTemplate(true)}
                   >
-                    Use custom template
+                    Custom template
                   </button>
                 </div>
                 {showTemplateList && (
@@ -1569,6 +1697,15 @@ function Dashboard() {
             setSelectedTemplate(t);
             setShowTemplateList(false);
             setShowCreateTemplate(false);
+          }}
+        />
+      )}
+      {showTemplateSelector && (
+        <TemplateSelector
+          onSelectTemplate={handleTemplateSelect}
+          onClose={() => {
+            setShowTemplateSelector(false);
+            setShowCreateBoard(true);
           }}
         />
       )}

@@ -6,9 +6,11 @@ function MagicLogin() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying'); // verifying, success, error
+  const boardId = searchParams.get('boardId');
 
   useEffect(() => {
     const token = searchParams.get('token');
+    const boardId = searchParams.get('boardId');
     
     if (!token) {
       console.error('No token provided in URL');
@@ -27,7 +29,7 @@ function MagicLogin() {
       .then((data) => {
         console.log('Magic login successful:', data);
         
-        // Store the JWT token and user info
+        // Store the JWT token and user info in localStorage
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
@@ -36,16 +38,31 @@ function MagicLogin() {
         }
         if (data.name) {
           localStorage.setItem('name', data.name);
+          localStorage.setItem('userName', data.name); // Backup key
+        }
+        if (data.email) {
+          localStorage.setItem('email', data.email);
         }
         if (data.role) {
           localStorage.setItem('role', data.role);
         }
         
+        console.log('✅ User authenticated and stored in localStorage:', {
+          userId: data.userId,
+          name: data.name,
+          email: data.email,
+          role: data.role
+        });
+        
         setStatus('success');
         
-        // Redirect to dashboard after a short delay
+        // Redirect to specific board or dashboard after a short delay
         setTimeout(() => {
-          navigate('/retroDashboard');
+          if (boardId) {
+            navigate(`/board/${boardId}`);
+          } else {
+            navigate('/retroDashboard');
+          }
         }, 1500);
       })
       .catch((error) => {
@@ -69,7 +86,11 @@ function MagicLogin() {
           <>
             <div className="success-icon">✅</div>
             <h2 className="magic-login-title">Success!</h2>
-            <p className="magic-login-text">Redirecting to your dashboard...</p>
+            <p className="magic-login-text">
+              {boardId 
+                ? 'Redirecting to your board...' 
+                : 'Redirecting to your dashboard...'}
+            </p>
           </>
         )}
 

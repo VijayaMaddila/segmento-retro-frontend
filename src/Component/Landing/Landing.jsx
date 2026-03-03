@@ -1,11 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import {
-  FiArrowRight,
-  FiCheck,
-  FiZap,
-  FiUsers,
-  FiTrendingUp,
-} from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiZap, FiUsers } from "react-icons/fi";
 import "./landing.css";
 
 function Landing() {
