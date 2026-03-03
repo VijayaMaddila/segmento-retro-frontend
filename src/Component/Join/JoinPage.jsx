@@ -1,33 +1,80 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import teamService from "../../api/services/teamService";
 import "./join.css";
 
 export default function JoinPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState("form");
+  const [status, setStatus] = useState("loading");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [isExistingUser, setIsExistingUser] = useState(false);
+  const [userName, setUserName] = useState("");
 
   const token = searchParams.get("token");
+  const emailFromUrl = searchParams.get("email");
 
   useEffect(() => {
-    if (!token) {
-      setMessage("Invalid invitation link.");
+    if (!token || !emailFromUrl) {
+      setMessage("Invalid invitation link. Missing token or email.");
       setStatus("error");
+      return;
     }
-  }, [token]);
+
+    setEmail(emailFromUrl);
+    checkUserStatus();
+  }, [token, emailFromUrl]);
+
+  async function checkUserStatus() {
+    try {
+      const response = await teamService.checkUser(emailFromUrl);
+      
+      if (response.ok && response.data) {
+        setIsExistingUser(response.data.exists);
+        if (response.data.exists && response.data.name) {
+          setUserName(response.data.name);
+        }
+        setStatus("form");
+      } else {
+        setStatus("form");
+      }
+    } catch (err) {
+      console.error("Error checking user status:", err);
+      setStatus("form");
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     
-    if (!name.trim()) {
-      setError("Please enter your name");
-      return;
+    // Validation for new users
+    if (!isExistingUser) {
+      if (!name.trim()) {
+        setError("Please enter your name");
+        return;
+      }
+
+      if (!password) {
+        setError("Please enter a password");
+        return;
+      }
+
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters long");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -35,78 +82,61 @@ export default function JoinPage() {
     setMessage("Joining team...");
 
     try {
-      const params = new URLSearchParams({
+      const requestBody = {
         token: token,
-        name: name.trim()
-      });
-      
-      if (email.trim()) {
-        params.append("email", email.trim());
-      }
-      
-      console.log("Accepting invitation with params:", params.toString());
-      
-      const res = await fetch(
-        `http://localhost:8080/api/teams/accept-invite?${params.toString()}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      };
 
-      console.log("Response status:", res.status);
-
-      if (!res.ok) {
-        if (res.status === 403) {
-          throw new Error("Access forbidden. The invitation link may have expired or is invalid. Please contact your team administrator.");
-        }
-        const errorText = await res.text().catch(() => "");
-        console.error("Error response:", errorText);
-        throw new Error(errorText || "Failed to accept invitation");
-      }
-
-      // Try to parse response as JSON (for existing users)
-      const contentType = res.headers.get("content-type");
-      let responseData = null;
-      
-      if (contentType && contentType.includes("application/json")) {
-        responseData = await res.json().catch(() => null);
-        console.log("Join response data:", responseData);
+      // Add fields based on user type
+      if (isExistingUser) {
+        // Existing user - only send token
       } else {
-        const responseText = await res.text().catch(() => "");
-        console.log("Join successful (text):", responseText);
+        // New user - send name, email, and password
+        requestBody.name = name.trim();
+        requestBody.email = email;
+        requestBody.password = password;
+      }
+      
+      console.log("Accepting invitation with body:", { ...requestBody, password: requestBody.password ? '***' : undefined });
+      
+      const response = await teamService.acceptInvite(requestBody);
+
+      if (!response.ok) {
+        throw new Error(response.message || response.error || "Failed to accept invitation");
       }
 
-      // Check if user already existed and we got login credentials
-      if (responseData && responseData.userExists && responseData.token) {
-        // User already exists - log them in automatically
-        console.log("Existing user detected, logging in automatically");
-        
-        localStorage.setItem("token", responseData.token);
+      const responseData = response.data;
+      console.log("Join response data:", responseData);
+
+      // Store authentication data
+      if (responseData.token) {
+        localStorage.setItem("authToken", responseData.token);
+        localStorage.setItem("token", responseData.token); // Keep for backward compatibility
+      }
+      
+      if (responseData.userId) {
         localStorage.setItem("userId", String(responseData.userId));
-        localStorage.setItem("name", responseData.name || name.trim());
-        
-        if (responseData.role) {
-          localStorage.setItem("role", responseData.role);
-        }
-
-        setStatus("success");
-        setMessage("Welcome back! You've been added to the team. Redirecting to dashboard...");
-
-        setTimeout(() => {
-          navigate("/retroDashboard");
-        }, 1500);
-      } else {
-        // New user created - redirect to login
-        setStatus("success");
-        setMessage("Welcome to the team! You can now log in or register to set up your account.");
-
-        setTimeout(() => {
-          navigate("/login");
-        }, 3000);
       }
+      
+      if (responseData.name) {
+        localStorage.setItem("userName", responseData.name);
+        localStorage.setItem("name", responseData.name); // Keep for backward compatibility
+      }
+      
+      if (responseData.email) {
+        localStorage.setItem("userEmail", responseData.email);
+      }
+
+      // Show success message
+      setStatus("success");
+      if (responseData.userExists || isExistingUser) {
+        setMessage(`Welcome back${userName ? ', ' + userName : ''}! You've been added to the team. Redirecting to dashboard...`);
+      } else {
+        setMessage("Account created successfully! Welcome to the team. Redirecting to dashboard...");
+      }
+
+      setTimeout(() => {
+        navigate("/retroDashboard");
+      }, 1500);
     } catch (err) {
       console.error("Error accepting invitation:", err);
       setStatus("error");
@@ -115,7 +145,7 @@ export default function JoinPage() {
     }
   }
 
-  if (status === "error" && !token) {
+  if (status === "error" && (!token || !emailFromUrl)) {
     return (
       <div className="join-container">
         <div className="join-card">
@@ -187,46 +217,92 @@ export default function JoinPage() {
       <div className="join-card">
         <div className="join-header">
           <h1 className="join-logo">SegmentoRetro</h1>
-          <h2 className="join-title">You've been invited to join a team!</h2>
-          <p className="join-subtitle">Enter your details to get started</p>
+          <h2 className="join-title">
+            {isExistingUser ? "Welcome back!" : "You've been invited to join a team!"}
+          </h2>
+          <p className="join-subtitle">
+            {isExistingUser 
+              ? `Hi ${userName || 'there'}! Click below to join the team.` 
+              : "Create your account to get started"}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="join-form">
           <div className="form-group">
-            <label htmlFor="name" className="form-label">
-              Full Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              className="form-input"
-              placeholder="Enter your full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={submitting}
-              autoFocus
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="email" className="form-label">
-              Email Address (Optional)
+              Email Address
             </label>
             <input
               id="email"
               type="email"
               className="form-input"
-              placeholder="Enter your email (optional)"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={submitting}
+              disabled
             />
           </div>
+
+          {!isExistingUser && (
+            <>
+              <div className="form-group">
+                <label htmlFor="name" className="form-label">
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  className="form-input"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={submitting}
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password" className="form-label">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  className="form-input"
+                  placeholder="Enter password (min 6 characters)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={submitting}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="confirmPassword" className="form-label">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  className="form-input"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={submitting}
+                  required
+                />
+              </div>
+            </>
+          )}
 
           {error && <p className="form-error">{error}</p>}
 
           <button type="submit" className="btn-join" disabled={submitting}>
-            {submitting ? "Joining..." : "Join Team"}
+            {submitting 
+              ? "Processing..." 
+              : isExistingUser 
+                ? "Join Team & Continue" 
+                : "Create Account & Join Team"}
           </button>
         </form>
       </div>

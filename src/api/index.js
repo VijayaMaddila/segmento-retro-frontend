@@ -10,3 +10,4 @@ export { default as API_CONFIG } from './config';
 export { templateService } from './services/templateService';
 export { columnService } from './services/columnService';
 export { commentService } from './services/commentService';
+export { default as teamService } from './services/teamService';
