@@ -1,19 +1,19 @@
-
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://tickett-management-backend.onrender.com";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
 /*Handle API response*/
 async function handleResponse(response) {
-  const contentType = response.headers.get('content-type');
-  const isJson = contentType && contentType.includes('application/json');
-  
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+
   let data;
   if (isJson) {
     data = await response.json().catch(() => null);
@@ -22,7 +22,7 @@ async function handleResponse(response) {
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || data || 'Request failed');
+    const error = new Error(data?.message || data || "Request failed");
     error.status = response.status;
     error.data = data;
     throw error;
@@ -35,7 +35,7 @@ const api = {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         ...options,
         headers: {
           ...getAuthHeaders(),
@@ -44,7 +44,7 @@ const api = {
       });
       return await handleResponse(response);
     } catch (error) {
-      console.error('GET request failed:', endpoint, error);
+      console.error("GET request failed:", endpoint, error);
       throw error;
     }
   },
@@ -54,7 +54,7 @@ const api = {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         ...options,
         headers: {
           ...getAuthHeaders(),
@@ -64,7 +64,7 @@ const api = {
       });
       return await handleResponse(response);
     } catch (error) {
-      console.error('POST request failed:', endpoint, error);
+      console.error("POST request failed:", endpoint, error);
       throw error;
     }
   },
@@ -74,7 +74,7 @@ const api = {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
-        method: 'PUT',
+        method: "PUT",
         ...options,
         headers: {
           ...getAuthHeaders(),
@@ -84,7 +84,7 @@ const api = {
       });
       return await handleResponse(response);
     } catch (error) {
-      console.error('PUT request failed:', endpoint, error);
+      console.error("PUT request failed:", endpoint, error);
       throw error;
     }
   },
@@ -94,7 +94,7 @@ const api = {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
-        method: 'DELETE',
+        method: "DELETE",
         ...options,
         headers: {
           ...getAuthHeaders(),
@@ -103,7 +103,7 @@ const api = {
       });
       return await handleResponse(response);
     } catch (error) {
-      console.error('DELETE request failed:', endpoint, error);
+      console.error("DELETE request failed:", endpoint, error);
       throw error;
     }
   },
