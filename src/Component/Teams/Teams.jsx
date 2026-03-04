@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import api from "../../api";
+import ProfileDropdown from "../Common/ProfileDropdown";
 import "./teams.css";
 
 function getInitials(name) {
@@ -369,8 +370,6 @@ function Teams() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 18;
 
-  const userName = localStorage.getItem("name") || "User";
-
   useEffect(() => {
     loadTeams();
   }, []);
@@ -390,11 +389,6 @@ function Teams() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleLogout() {
-    localStorage.clear();
-    navigate("/login");
   }
 
   const filteredTeams = teams.filter((team) => {
@@ -438,15 +432,7 @@ function Teams() {
             
           </nav>
         </div>
-        <div className="dash-nav-right">
-          <div className="nav-profile">
-            <div className="nav-avatar">{getInitials(userName)}</div>
-            <span className="nav-username">{userName}</span>
-          </div>
-          <button className="nav-logout-btn" onClick={handleLogout}>
-            Log out
-          </button>
-        </div>
+        <ProfileDropdown />
       </header>
 
       <main className="dash-main">

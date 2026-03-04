@@ -917,10 +917,40 @@ function Dashboard() {
     setMenuOpen(false);
   }
 
-  // Current user info
-  const userName =
-    localStorage.getItem("name") || localStorage.getItem("name") || "User";
-  const userRole = localStorage.getItem("role") || "MEMBER";
+  const [userProfile, setUserProfile] = useState({
+    name: "Loading...",
+    email: "",
+    role: "MEMBER",
+  });
+  const userName = userProfile.name;
+  const userRole = userProfile.role;
+
+  useEffect(() => {
+    async function fetchUserProfile() {
+      try {
+        const data = await api.get("/api/users/current");
+        console.log("User profile data:", data);
+        setUserProfile({
+          name: data.name || data.username || "User",
+          email: data.email || data.emailId || data.mail || "No email",
+          role: data.role || "MEMBER",
+        });
+        // Store userId if not already stored
+        if (data.id && !localStorage.getItem("userId")) {
+          localStorage.setItem("userId", data.id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        // Fallback to localStorage only if API fails
+        setUserProfile({
+          name: localStorage.getItem("name") || "User",
+          email: localStorage.getItem("email") || "No email",
+          role: localStorage.getItem("role") || "MEMBER",
+        });
+      }
+    }
+    fetchUserProfile();
+  }, []);
 
   // Debug logging for role
   useEffect(() => {
@@ -948,9 +978,11 @@ function Dashboard() {
     try {
       const userId = localStorage.getItem("userId");
       await api.put(`/api/users/${userId}`, { name: newName.trim() });
+
+      // Update local state and localStorage
+      setUserProfile((prev) => ({ ...prev, name: newName.trim() }));
       localStorage.setItem("name", newName.trim());
       setEditingName(false);
-      window.location.reload(); // Refresh to update name everywhere
     } catch (err) {
       alert("Failed to update name: " + (err.message || "Unknown error"));
     }
@@ -1278,9 +1310,11 @@ function Dashboard() {
                       </div>
                     )}
                     <span className="profile-dropdown-email">
-                      {localStorage.getItem("email") || "user@example.com"}
+                      {userProfile.email || "No email"}
                     </span>
-                    <span className="profile-dropdown-role">{userRole}</span>
+                    <span className="profile-dropdown-role">
+                      {userProfile.role}
+                    </span>
                   </div>
                 </div>
                 <div className="profile-dropdown-divider"></div>

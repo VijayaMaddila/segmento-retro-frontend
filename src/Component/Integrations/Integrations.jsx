@@ -1,24 +1,9 @@
 import { useNavigate } from "react-router-dom";
+import ProfileDropdown from "../Common/ProfileDropdown";
 import "./integrations.css";
-
-function getInitials(name) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 function Integrations() {
   const navigate = useNavigate();
-  const userName = localStorage.getItem("name") || "User";
-
-  function handleLogout() {
-    localStorage.clear();
-    navigate("/login");
-  }
 
   return (
     <div className="app dashboard-app">
@@ -42,15 +27,7 @@ function Integrations() {
             </button>
           </nav>
         </div>
-        <div className="dash-nav-right">
-          <div className="nav-profile">
-            <div className="nav-avatar">{getInitials(userName)}</div>
-            <span className="nav-username">{userName}</span>
-          </div>
-          <button className="nav-logout-btn" onClick={handleLogout}>
-            Log out
-          </button>
-        </div>
+        <ProfileDropdown />
       </header>
 
       <main className="dash-main">
