@@ -89,6 +89,26 @@
   flex-direction: column;
   overflow-y: auto;
   height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+}
+
+/* Custom scrollbar for sidebar */
+.template-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.template-sidebar::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.template-sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.template-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .template-nav-section {
@@ -244,6 +264,26 @@
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #ffffff;
+}
+
+/* Custom scrollbar for template list */
+.template-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.template-list::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+.template-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.template-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .template-loading-state,
@@ -288,17 +328,26 @@
   padding: 24px;
   background: white;
   height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #ffffff;
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
+/* Custom scrollbar for preview section */
 .template-preview-section::-webkit-scrollbar {
-  display: none;
+  width: 6px;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
-.template-preview-section {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+.template-preview-section::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+.template-preview-section::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.template-preview-section::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .template-preview-header {

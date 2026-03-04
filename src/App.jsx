@@ -4,6 +4,8 @@ import Register from "./Component/Register/Register";
 import Dashboard from "./Component/Dashboard/Dashboard";
 import Board from "./Component/Board/Board";
 import Analytics from "./Component/Analytics/Analytics";
+import Teams from "./Component/Teams/Teams";
+import Integrations from "./Component/Integrations/Integrations";
 import JoinPage from "./Component/Join/JoinPage";
 import MagicLogin from "./Component/MagicLogin/MagicLogin";
 
@@ -44,6 +46,23 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute>
+              <Teams />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/integrations"
+          element={
+            <ProtectedRoute>
+              <Integrations />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="/join" element={<JoinPage />} />
       </Routes>
     </BrowserRouter>

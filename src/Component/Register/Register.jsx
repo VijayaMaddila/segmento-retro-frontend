@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from "react-icons/fi";
+import api from "../../api";
 import "./register.css";
 
 function Register() {
@@ -29,28 +30,12 @@ function Register() {
 
     try {
       const isLogin = mode === "login";
-      const response = await fetch(
-        isLogin
-          ? "http://localhost:8080/api/auth/login"
-          : "http://localhost:8080/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(
-            isLogin ? { email, password } : { name, email, password, role },
-          ),
-        },
-      );
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const body = isLogin
+        ? { email, password }
+        : { name, email, password, role };
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            (isLogin ? "Invalid email or password" : "Registration failed"),
-        );
-      }
+      const data = await api.post(endpoint, body);
 
       if (isLogin) {
         if (!data.token) {
@@ -208,8 +193,6 @@ function Register() {
                 >
                   <option value="MEMBER">Member</option>
                   <option value="ADMIN">Admin</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="VIEWER">Viewer</option>
                 </select>
               </label>
             )}

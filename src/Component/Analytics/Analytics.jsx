@@ -1,11 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api";
 import "./analytics.css";
+
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 function Analytics() {
   const navigate = useNavigate();
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const userName = localStorage.getItem("name") || "User";
+
+  function handleLogout() {
+    localStorage.clear();
+    navigate("/login");
+  }
 
   useEffect(() => {
     fetchAnalytics();
@@ -14,22 +31,11 @@ function Analytics() {
   async function fetchAnalytics() {
     try {
       const userId = localStorage.getItem("userId");
-      const token = localStorage.getItem("token");
       
-      const res = await fetch(
-        `http://localhost:8080/api/boards/user/${userId}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
-      
-      const data = await res.json().catch(() => []);
+      const data = await api.get(`/api/boards/user/${userId}`);
       const boardsArray = Array.isArray(data) ? data : [];
       
-      // Calculate analytics for each board by fetching cards
+  
       const boardsWithAnalytics = await Promise.all(
         boardsArray.map(async (board) => {
           let cardCount = 0;
@@ -37,28 +43,16 @@ function Analytics() {
           
           try {
             // Fetch cards for this board
-            const cardsRes = await fetch(
-              `http://localhost:8080/api/cards/board/${board.id}`,
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-              }
-            );
+            const cards = await api.get(`/api/cards/board/${board.id}`);
+            if (Array.isArray(cards)) {
+              cardCount = cards.length;
+              
             
-            if (cardsRes.ok) {
-              const cards = await cardsRes.json().catch(() => []);
-              if (Array.isArray(cards)) {
-                cardCount = cards.length;
-                
-                // Collect unique user IDs who created cards
-                cards.forEach(card => {
-                  if (card.userId) {
-                    contributors.add(card.userId);
-                  }
-                });
-              }
+              cards.forEach(card => {
+                if (card.userId) {
+                  contributors.add(card.userId);
+                }
+              });
             }
           } catch (err) {
             console.error(`Error fetching cards for board ${board.id}:`, err);
@@ -85,63 +79,91 @@ function Analytics() {
   }
 
   return (
-    <div className="analytics-container">
-      <header className="analytics-header">
-        <div className="analytics-header-left">
-          <div className="analytics-logo" onClick={() => navigate("/retroDashboard")}>
-            SegmentoRetro
-          </div>
+    <div className="app dashboard-app">
+      <header className="dash-navbar">
+        <div className="dash-nav-left">
+          <span className="dash-logo">SegmentoRetro</span>
         </div>
-        <h1 className="analytics-title">Analytics</h1>
-        <div className="analytics-header-right">
-          <button className="btn-back" onClick={() => navigate("/retroDashboard")}>
-            Back to Dashboard
+        <div className="nave-bar">
+          <nav className="dash-nav-center">
+            <button className="dash-tab" onClick={() => navigate("/retroDashboard")}>
+              Dashboard
+            </button>
+            <button className="dash-tab" onClick={() => navigate("/teams")}>
+              Teams
+            </button>
+            <button className="dash-tab active">
+              Analytics
+            </button>
+            <button className="dash-tab" onClick={() => navigate("/integrations")}>
+              Integrations
+            </button>
+          </nav>
+        </div>
+        <div className="dash-nav-right">
+          <div className="nav-profile">
+            <div className="nav-avatar">{getInitials(userName)}</div>
+            <span className="nav-username">{userName}</span>
+          </div>
+          <button className="nav-logout-btn" onClick={handleLogout}>
+            Log out
           </button>
         </div>
       </header>
 
-      <main className="analytics-main">
-        <div className="analytics-section">
-          <h2 className="section-title">Public Boards</h2>
-          
-          <div className="analytics-table-wrapper">
-            <table className="analytics-table">
-              <thead>
-                <tr>
-                  <th>Retro name</th>
-                  <th>Created date</th>
-                  <th>Last modified</th>
-                  <th>Cards</th>
-                  <th>Contributors</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {boards.length === 0 ? (
+      <main className="dash-main">
+        <div className="tab-container">
+          <div className="tab-header">
+            <div>
+              <h1 className="page-title">Analytics</h1>
+              <p className="page-subtitle">
+                Track your team's retrospective activity and insights
+              </p>
+            </div>
+          </div>
+
+          <div className="analytics-section">
+            <h2 className="section-title">Public Boards</h2>
+            
+            <div className="analytics-table-wrapper">
+              <table className="analytics-table">
+                <thead>
                   <tr>
-                    <td colSpan="6" className="no-data">No boards found</td>
+                    <th>Retro name</th>
+                    <th>Created date</th>
+                    <th>Last modified</th>
+                    <th>Cards</th>
+                    <th>Contributors</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  boards.map((board) => (
-                    <tr key={board.id}>
-                      <td className="board-name">{board.title}</td>
-                      <td>{new Date(board.createdAt).toLocaleDateString()}</td>
-                      <td>{new Date(board.updatedAt || board.createdAt).toLocaleDateString()}</td>
-                      <td>{board.cardCount || 0}</td>
-                      <td>{board.contributorCount || 1}</td>
-                      <td>
-                        <button 
-                          className="btn-view"
-                          onClick={() => navigate(`/board/${board.id}`)}
-                        >
-                          View
-                        </button>
-                      </td>
+                </thead>
+                <tbody>
+                  {boards.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="no-data">No boards found</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    boards.map((board) => (
+                      <tr key={board.id}>
+                        <td className="board-name">{board.title}</td>
+                        <td>{new Date(board.createdAt).toLocaleDateString()}</td>
+                        <td>{new Date(board.updatedAt || board.createdAt).toLocaleDateString()}</td>
+                        <td>{board.cardCount || 0}</td>
+                        <td>{board.contributorCount || 1}</td>
+                        <td>
+                          <button 
+                            className="btn-view"
+                            onClick={() => navigate(`/board/${board.id}`)}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </main>

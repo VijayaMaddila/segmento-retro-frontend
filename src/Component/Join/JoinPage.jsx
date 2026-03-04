@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import teamService from "../../api/services/teamService";
+import api from "../../api";
 import "./join.css";
 
 export default function JoinPage() {
@@ -33,12 +33,12 @@ export default function JoinPage() {
 
   async function checkUserStatus() {
     try {
-      const response = await teamService.checkUser(emailFromUrl);
+      const response = await api.get(`/api/teams/check-user?email=${encodeURIComponent(emailFromUrl)}`);
       
-      if (response.ok && response.data) {
-        setIsExistingUser(response.data.exists);
-        if (response.data.exists && response.data.name) {
-          setUserName(response.data.name);
+      if (response) {
+        setIsExistingUser(response.exists);
+        if (response.exists && response.name) {
+          setUserName(response.name);
         }
         setStatus("form");
       } else {
@@ -54,7 +54,7 @@ export default function JoinPage() {
     e.preventDefault();
     setError("");
     
-    // Validation for new users
+  
     if (!isExistingUser) {
       if (!name.trim()) {
         setError("Please enter your name");
@@ -86,11 +86,11 @@ export default function JoinPage() {
         token: token,
       };
 
-      // Add fields based on user type
+  
       if (isExistingUser) {
-        // Existing user - only send token
+      
       } else {
-        // New user - send name, email, and password
+        
         requestBody.name = name.trim();
         requestBody.email = email;
         requestBody.password = password;
@@ -98,19 +98,19 @@ export default function JoinPage() {
       
       console.log("Accepting invitation with body:", { ...requestBody, password: requestBody.password ? '***' : undefined });
       
-      const response = await teamService.acceptInvite(requestBody);
+      const response = await api.post('/api/teams/accept-invite', requestBody);
 
-      if (!response.ok) {
-        throw new Error(response.message || response.error || "Failed to accept invitation");
+      if (!response) {
+        throw new Error("Failed to accept invitation");
       }
 
-      const responseData = response.data;
+      const responseData = response;
       console.log("Join response data:", responseData);
 
       // Store authentication data
       if (responseData.token) {
         localStorage.setItem("authToken", responseData.token);
-        localStorage.setItem("token", responseData.token); // Keep for backward compatibility
+        localStorage.setItem("token", responseData.token); 
       }
       
       if (responseData.userId) {
@@ -119,14 +119,12 @@ export default function JoinPage() {
       
       if (responseData.name) {
         localStorage.setItem("userName", responseData.name);
-        localStorage.setItem("name", responseData.name); // Keep for backward compatibility
+        localStorage.setItem("name", responseData.name); 
       }
       
       if (responseData.email) {
         localStorage.setItem("userEmail", responseData.email);
       }
-
-      // Show success message
       setStatus("success");
       if (responseData.userExists || isExistingUser) {
         setMessage(`Welcome back${userName ? ', ' + userName : ''}! You've been added to the team. Redirecting to dashboard...`);

@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
-import TemplateSelector from "../../components/TemplateSelector";
-import { templateService } from "../../api";
+import TemplateSelector from "../Templates/TemplateSelector";
+import api from "../../api";
 import "./dashboard.css";
 
-//Shared helpers
 function getInitials(name) {
   if (!name) return "?";
   return name
@@ -96,22 +95,16 @@ function CreateTemplateModal({ onClose, onCreated }) {
     if (!filled.length) return setError("Please add at least one column.");
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:8080/api/templates", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          title: templateName.trim(),
-          description: description.trim(),
-          category: category,
-          language: language,
-          columns: filled.map((c, i) => ({
-            name: c.name.trim(),
-            position: i,
-          })),
-        }),
+      const data = await api.post("/api/templates", {
+        title: templateName.trim(),
+        description: description.trim(),
+        category: category,
+        language: language,
+        columns: filled.map((c, i) => ({
+          name: c.name.trim(),
+          position: i,
+        })),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Failed to create template");
       onCreated(data);
       onClose();
     } catch (err) {
@@ -257,40 +250,15 @@ function CreateTeamModal({ onClose, onCreated }) {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  
-  // Board assignment states
-  const [unassignedBoards, setUnassignedBoards] = useState([]);
-  const [selectedBoards, setSelectedBoards] = useState([]);
-  const [loadingBoards, setLoadingBoards] = useState(false);
-  const [boardSearch, setBoardSearch] = useState("");
 
   useEffect(() => {
     setLoadingUsers(true);
-    fetch("http://localhost:8080/api/users", { headers: authHeaders() })
-      .then((r) => r.json())
+    api
+      .get("/api/users")
       .then((d) => setAllUsers(Array.isArray(d) ? d : []))
       .catch(() => setAllUsers([]))
       .finally(() => setLoadingUsers(false));
-    
-    // Fetch unassigned boards
-    fetchUnassignedBoards();
   }, []);
-
-  async function fetchUnassignedBoards() {
-    setLoadingBoards(true);
-    try {
-      const res = await fetch("http://localhost:8080/api/boards/unassigned", {
-        headers: authHeaders(),
-      });
-      const data = await res.json().catch(() => []);
-      setUnassignedBoards(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Error fetching unassigned boards:", err);
-      setUnassignedBoards([]);
-    } finally {
-      setLoadingBoards(false);
-    }
-  }
 
   const filteredUsers = allUsers.filter(
     (u) =>
@@ -300,27 +268,12 @@ function CreateTeamModal({ onClose, onCreated }) {
         u.email?.toLowerCase().includes(memberSearch.toLowerCase())),
   );
 
-  const filteredBoards = unassignedBoards.filter(
-    (b) =>
-      !selectedBoards.find((sb) => sb.id === b.id) &&
-      (!boardSearch ||
-        b.title?.toLowerCase().includes(boardSearch.toLowerCase())),
-  );
-
   function addMember(user) {
     setSelectedMembers((p) => [...p, user]);
     setMemberSearch("");
   }
   function removeMember(id) {
     setSelectedMembers((p) => p.filter((m) => m.id !== id));
-  }
-
-  function addBoard(board) {
-    setSelectedBoards((p) => [...p, board]);
-    setBoardSearch("");
-  }
-  function removeBoard(id) {
-    setSelectedBoards((p) => p.filter((b) => b.id !== id));
   }
 
   function handleAddEmail(e) {
@@ -354,49 +307,28 @@ function CreateTeamModal({ onClose, onCreated }) {
     setSaving(true);
     try {
       const userId = localStorage.getItem("userId");
-      const res = await fetch("http://localhost:8080/api/teams/create", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: teamName.trim(),
-          createdBy: userId ? Number(userId) : null,
-          members: selectedMembers.map((m) => m.id),
-          boardIds: selectedBoards.map((b) => b.id), // Add board IDs
-        }),
+      const data = await api.post("/api/teams/create", {
+        name: teamName.trim(),
+        createdBy: userId ? Number(userId) : null,
+        members: selectedMembers.map((m) => m.id),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Failed to create team");
 
       if (inviteEmails.length > 0) {
         try {
           console.log("Sending invitations to:", inviteEmails);
           console.log("Team ID:", data.id);
-          
-          const inviteRes = await fetch(`http://localhost:8080/api/teams/${data.id}/invite`, {
-            method: "POST",
-            headers: authHeaders(),
-            body: JSON.stringify(inviteEmails),
-          });
-          
-          console.log("Invite response status:", inviteRes.status);
-          
-          if (!inviteRes.ok) {
-            const inviteData = await inviteRes.text().catch(() => "");
-            console.error("Invitation failed:", inviteData);
-            
-            if (inviteRes.status === 403) {
-              alert("Team created successfully, but you don't have permission to send invitations. Please contact your administrator.");
-            } else {
-              alert(`Team created successfully, but some email invitations failed: ${inviteData || "Unknown error"}`);
-            }
-          } else {
-            const inviteData = await inviteRes.text().catch(() => "");
-            console.log("Invitations sent successfully:", inviteData);
-            alert(`Team created successfully! Invitation emails sent to ${inviteEmails.length} recipient(s).`);
-          }
+
+          await api.post(`/api/teams/${data.id}/invite`, inviteEmails);
+
+          console.log("Invitations sent successfully");
+          alert(
+            `Team created successfully! Invitation emails sent to ${inviteEmails.length} recipient(s).`,
+          );
         } catch (inviteErr) {
           console.error("Error sending invitations:", inviteErr);
-          alert("Team created successfully, but failed to send invitation emails. Please try inviting members again later.");
+          alert(
+            "Team created successfully, but failed to send invitation emails. Please try inviting members again later.",
+          );
         }
       } else {
         alert("Team created successfully!");
@@ -528,7 +460,10 @@ function CreateTeamModal({ onClose, onCreated }) {
 
           <div className="field-group">
             <span className="field-label">Invite by Email</span>
-            <form onSubmit={handleAddEmail} style={{ display: "flex", gap: "8px" }}>
+            <form
+              onSubmit={handleAddEmail}
+              style={{ display: "flex", gap: "8px" }}
+            >
               <input
                 type="email"
                 className="field-input"
@@ -569,99 +504,6 @@ function CreateTeamModal({ onClose, onCreated }) {
             )}
           </div>
 
-          <div className="field-group">
-            <span className="field-label">
-              Assign Boards (Optional)
-              {unassignedBoards.length > 0 && (
-                <span className="badge-muted">
-                  {unassignedBoards.length} unassigned boards
-                </span>
-              )}
-            </span>
-
-            <div className="search-wrap">
-              <FiSearch size={14} className="search-icon" />
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Search boards..."
-                value={boardSearch}
-                onChange={(e) => setBoardSearch(e.target.value)}
-              />
-              {boardSearch && (
-                <button
-                  className="search-clear"
-                  type="button"
-                  onClick={() => setBoardSearch("")}
-                >
-                  <FiX size={12} />
-                </button>
-              )}
-            </div>
-
-            <div className="user-list">
-              {loadingBoards ? (
-                <div className="user-list-empty">
-                  <span className="spinner spinner--sm" />
-                  Loading boards...
-                </div>
-              ) : filteredBoards.length === 0 ? (
-                <div className="user-list-empty">
-                  {boardSearch
-                    ? `No boards match "${boardSearch}"`
-                    : unassignedBoards.length === 0
-                    ? "No unassigned boards available"
-                    : "All boards are already selected"}
-                </div>
-              ) : (
-                filteredBoards.map((board) => (
-                  <button
-                    key={board.id}
-                    type="button"
-                    className="user-list-item"
-                    onClick={() => addBoard(board)}
-                  >
-                    <span className="user-avatar" style={{ background: PALETTE[board.id % PALETTE.length].accent }}>
-                      {getInitials(board.title)}
-                    </span>
-                    <span className="user-info">
-                      <span className="user-name">{board.title}</span>
-                      {board.templateName && (
-                        <span className="user-email">{board.templateName}</span>
-                      )}
-                    </span>
-                    <span className="user-add-btn">+</span>
-                  </button>
-                ))
-              )}
-            </div>
-
-            {selectedBoards.length > 0 && (
-              <div className="selected-members">
-                <span className="selected-label">
-                  Selected Boards ({selectedBoards.length})
-                </span>
-                <div className="chip-wrap">
-                  {selectedBoards.map((b) => (
-                    <div key={b.id} className="member-chip">
-                      <span className="chip-avatar" style={{ background: PALETTE[b.id % PALETTE.length].accent }}>
-                        {getInitials(b.title)}
-                      </span>
-                      <span className="chip-name">{b.title}</span>
-                      <button
-                        type="button"
-                        className="chip-remove"
-                        onClick={() => removeBoard(b.id)}
-                      >
-                        <FiX size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {error && <p className="field-error">{error}</p>}
           <footer className="modal-footer">
             <button
@@ -684,7 +526,6 @@ function CreateTeamModal({ onClose, onCreated }) {
     </div>
   );
 }
-
 
 // SHARED CARD COMPONENT
 function BoardCard({ board, onClick, onDelete }) {
@@ -779,14 +620,14 @@ function TeamCard({ team, idx, isDeleting }) {
   const memberCount = team.members?.length || 0;
 
   return (
-    <div 
-      className="dash-card" 
-      style={{ 
-        background: bg, 
+    <div
+      className="dash-card"
+      style={{
+        background: bg,
         position: "relative",
         opacity: isDeleting ? 0.5 : 1,
-        pointerEvents: isDeleting ? 'none' : 'auto',
-        transition: 'opacity 0.3s ease'
+        pointerEvents: isDeleting ? "none" : "auto",
+        transition: "opacity 0.3s ease",
       }}
     >
       <div className="dash-card-accent" style={{ background: accent }} />
@@ -850,11 +691,7 @@ function TeamsTab() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:8080/api/teams", {
-        headers: authHeaders(),
-      });
-      const data = await res.json().catch(() => []);
-      if (!res.ok) throw new Error(data.message || "Failed to load teams");
+      const data = await api.get("/api/teams");
       setTeams(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load teams");
@@ -972,11 +809,7 @@ function TeamsTab() {
                   </button>
                 )}
                 {paginatedTeams.map((team, idx) => (
-                  <TeamCard
-                    key={team.id}
-                    team={team}
-                    idx={startIndex + idx}
-                  />
+                  <TeamCard key={team.id} team={team} idx={startIndex + idx} />
                 ))}
               </div>
 
@@ -984,7 +817,7 @@ function TeamsTab() {
                 <div className="pagination">
                   <button
                     className="pagination-btn"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                   >
                     ← Previous
@@ -994,7 +827,9 @@ function TeamsTab() {
                   </div>
                   <button
                     className="pagination-btn"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                     disabled={currentPage === totalPages}
                   >
                     Next →
@@ -1024,44 +859,60 @@ function TeamsTab() {
   );
 }
 // DASHBOARD
-const NAV_TABS = [
-  "Dashboard",
-  "Teams",
-  "Analytics",
-  "Integrations",
-  "Subscription",
-];
+const NAV_TABS = ["Dashboard", "Teams", "Analytics", "Integrations"];
 
 function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
   const menuRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target)
+      ) {
+        setProfileMenuOpen(false);
+      }
     }
-    if (menuOpen) {
+    if (menuOpen || profileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen]);
+  }, [menuOpen, profileMenuOpen]);
 
   function handleTabSelect(tab) {
     if (tab === "Analytics") {
       navigate("/analytics");
       return;
     }
-    
-    // Only MEMBER role is restricted to Dashboard
-    if (userRole === "MEMBER" && tab !== "Dashboard") {
-      alert("You don't have permission to access this section. Members can only view boards.");
+
+    if (tab === "Integrations") {
+      navigate("/integrations");
       return;
     }
-    
+
+    if (tab === "Teams") {
+      navigate("/teams");
+      return;
+    }
+
+    // Only MEMBER role is restricted to Dashboard
+    if (userRole === "MEMBER" && tab !== "Dashboard") {
+      alert(
+        "You don't have permission to access this section. Members can only view boards.",
+      );
+      return;
+    }
+
     setActiveTab(tab);
     setMenuOpen(false);
   }
@@ -1070,7 +921,7 @@ function Dashboard() {
   const userName =
     localStorage.getItem("name") || localStorage.getItem("name") || "User";
   const userRole = localStorage.getItem("role") || "MEMBER";
-  
+
   // Debug logging for role
   useEffect(() => {
     console.log("Dashboard - User Role:", userRole);
@@ -1085,6 +936,24 @@ function Dashboard() {
     localStorage.removeItem("name");
     localStorage.removeItem("role");
     navigate("/login");
+  }
+
+  function handleEditName() {
+    setNewName(userName);
+    setEditingName(true);
+  }
+
+  async function handleSaveName() {
+    if (!newName.trim()) return;
+    try {
+      const userId = localStorage.getItem("userId");
+      await api.put(`/api/users/${userId}`, { name: newName.trim() });
+      localStorage.setItem("name", newName.trim());
+      setEditingName(false);
+      window.location.reload(); // Refresh to update name everywhere
+    } catch (err) {
+      alert("Failed to update name: " + (err.message || "Unknown error"));
+    }
   }
 
   // ── Board creation ──
@@ -1134,14 +1003,7 @@ function Dashboard() {
     setBoardsError("");
     try {
       // All roles use the same endpoint - backend filters based on role and team membership
-      const res = await fetch(
-        `http://localhost:8080/api/boards/user/${userId}`,
-        {
-          headers: authHeaders(),
-        },
-      );
-      const data = await res.json().catch(() => []);
-      if (!res.ok) throw new Error(data.message || "Failed to load boards");
+      const data = await api.get(`/api/boards/user/${userId}`);
       setUserBoards(Array.isArray(data) ? data : []);
     } catch (err) {
       setBoardsError(err.message || "Failed to load boards");
@@ -1159,21 +1021,9 @@ function Dashboard() {
 
     try {
       console.log("Deleting board:", boardId);
-      const res = await fetch(`http://localhost:8080/api/boards/${boardId}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
+      await api.delete(`/api/boards/${boardId}`);
 
-      console.log("Delete response status:", res.status);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.error("Delete failed:", data);
-        throw new Error(data.message || "Failed to delete board");
-      }
-
-      const responseData = await res.json().catch(() => null);
-      console.log("Delete successful:", responseData);
+      console.log("Delete successful");
 
       // Remove board from UI instantly
       setUserBoards((prev) => prev.filter((b) => b.id !== boardId));
@@ -1190,11 +1040,7 @@ function Dashboard() {
     setLoadingTemplates(true);
     setTemplatesError("");
     try {
-      const res = await fetch("http://localhost:8080/api/templates", {
-        headers: authHeaders(),
-      });
-      const data = await res.json().catch(() => []);
-      if (!res.ok) throw new Error(data.message || "Failed to load templates");
+      const data = await api.get("/api/templates");
       const list = Array.isArray(data) ? data : [];
       setTemplates(list);
       if (!selectedTemplate && list.length > 0) setSelectedTemplate(list[0]);
@@ -1210,11 +1056,7 @@ function Dashboard() {
     setLoadingTeams(true);
     setTeamsError("");
     try {
-      const res = await fetch("http://localhost:8080/api/teams", {
-        headers: authHeaders(),
-      });
-      const data = await res.json().catch(() => []);
-      if (!res.ok) throw new Error(data.message || "Failed to load teams");
+      const data = await api.get("/api/teams");
       setTeams(data);
       if (!selectedTeam && data.length > 0) setSelectedTeam(data[0]);
     } catch (err) {
@@ -1237,18 +1079,12 @@ function Dashboard() {
     setCreating(true);
     try {
       const userId = localStorage.getItem("userId");
-      const res = await fetch("http://localhost:8080/api/boards", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          title: boardTitle,
-          templateId: selectedTemplate?.id ?? null,
-          userId: userId ? Number(userId) : undefined,
-          teamId: selectedTeam?.id,
-        }),
+      const data = await api.post("/api/boards", {
+        title: boardTitle,
+        templateId: selectedTemplate?.id ?? null,
+        userId: userId ? Number(userId) : undefined,
+        teamId: selectedTeam?.id,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Failed to create board");
       setBoardTitle("");
       setSelectedTemplate(null);
       setShowCreateBoard(false);
@@ -1265,50 +1101,77 @@ function Dashboard() {
     // Close template selector and set the selected template
     setShowTemplateSelector(false);
     setSelectedTemplate(template);
-    
+
     // Pre-fill board title with template title if empty
     if (!boardTitle) {
       setBoardTitle(template.title);
     }
-    
+
     // Show the create board modal so user can confirm/edit name and select team
     setShowCreateBoard(true);
   }
 
+  function handleCloseCreateBoard() {
+    setShowCreateBoard(false);
+    setBoardTitle("");
+    setSelectedTemplate(null);
+    setBoardError("");
+  }
+
   async function handleCreateBoardWithTemplate(e) {
     e.preventDefault();
-    
-    // If a template is selected, use the template service
+
+    // If a template is selected, create board with template
     if (selectedTemplate) {
       setBoardError("");
       setCreating(true);
-      
+
       try {
         const userId = localStorage.getItem("userId");
-        
-        // Pass the full template object to avoid 403 error on template fetch
-        const result = await templateService.createBoardFromTemplate(selectedTemplate, {
+
+        // Create board
+        const board = await api.post("/api/boards", {
           title: boardTitle,
+          templateId: selectedTemplate.id,
           userId: userId ? Number(userId) : undefined,
           teamId: selectedTeam?.id,
         });
 
-        if (result.ok) {
-          setBoardTitle("");
-          setSelectedTemplate(null);
-          setShowCreateBoard(false);
-          fetchUserBoards();
-          if (result.data.id) navigate(`/board/${result.data.id}`);
-        } else {
-          throw new Error(result.message || 'Failed to create board from template');
+        // Increment template usage count
+        if (selectedTemplate.id) {
+          await api
+            .post(`/api/templates/${selectedTemplate.id}/use`)
+            .catch((err) => {
+              console.warn("Failed to increment template usage:", err);
+            });
         }
+
+        // Create columns from template
+        if (
+          selectedTemplate.columns &&
+          Array.isArray(selectedTemplate.columns)
+        ) {
+          for (const column of selectedTemplate.columns) {
+            await api.post(`/api/board-columns/${board.id}`, {
+              title: column.name || column.title,
+              position: column.position,
+              boardId: board.id,
+            });
+          }
+        }
+
+        setBoardTitle("");
+        setSelectedTemplate(null);
+        setShowCreateBoard(false);
+        fetchUserBoards();
+        if (board.id) navigate(`/board/${board.id}`);
       } catch (err) {
         setBoardError(err.message || "Failed to create board from template");
       } finally {
         setCreating(false);
       }
     } else {
-      // Regular board creation without template service
+      // Regular board creation without template
       handleCreateBoard(e);
     }
   }
@@ -1332,7 +1195,6 @@ function Dashboard() {
           <div className="nave-bar">
             <nav className="dash-nav-center">
               {NAV_TABS.map((tab) => {
-                // Hide non-Dashboard tabs for MEMBER role
                 if (userRole === "MEMBER" && tab !== "Dashboard") {
                   return null;
                 }
@@ -1348,19 +1210,92 @@ function Dashboard() {
               })}
             </nav>
           </div>
-          <div className="dash-nav-right">
-            <div className="nav-profile">
+          <div className="dash-nav-right" ref={profileMenuRef}>
+            <div
+              className="nav-profile"
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="nav-avatar">{getInitials(userName)}</div>
               <span className="nav-username">{userName}</span>
             </div>
-            <button className="nav-logout-btn" onClick={handleLogout}>
-              Log out
-            </button>
+
+            {profileMenuOpen && (
+              <div className="profile-dropdown">
+                <div className="profile-dropdown-header">
+                  <div className="profile-dropdown-avatar">
+                    {getInitials(userName)}
+                  </div>
+                  <div className="profile-dropdown-info">
+                    {editingName ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "4px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="profile-name-input"
+                          autoFocus
+                          onKeyPress={(e) =>
+                            e.key === "Enter" && handleSaveName()
+                          }
+                        />
+                        <button
+                          onClick={handleSaveName}
+                          className="profile-save-btn"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingName(false)}
+                          className="profile-cancel-btn"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span className="profile-dropdown-name">
+                          {userName}
+                        </span>
+                        <button
+                          onClick={handleEditName}
+                          className="profile-edit-btn"
+                        >
+                          ✎
+                        </button>
+                      </div>
+                    )}
+                    <span className="profile-dropdown-email">
+                      {localStorage.getItem("email") || "user@example.com"}
+                    </span>
+                    <span className="profile-dropdown-role">{userRole}</span>
+                  </div>
+                </div>
+                <div className="profile-dropdown-divider"></div>
+                <button
+                  className="profile-dropdown-item"
+                  onClick={handleLogout}
+                >
+                  <span>🚪</span> Log out
+                </button>
+              </div>
+            )}
           </div>
         </header>
         <nav className={`dash-mobile-menu${menuOpen ? " open" : ""}`}>
           {NAV_TABS.map((tab) => {
-            // Hide non-Dashboard tabs for MEMBER role
             if (userRole === "MEMBER" && tab !== "Dashboard") {
               return null;
             }
@@ -1443,24 +1378,30 @@ function Dashboard() {
                 });
 
                 // Pagination logic
-                const totalPages = Math.ceil(filteredBoards.length / itemsPerPage);
+                const totalPages = Math.ceil(
+                  filteredBoards.length / itemsPerPage,
+                );
                 const startIndex = (currentPage - 1) * itemsPerPage;
                 const endIndex = startIndex + itemsPerPage;
-                const paginatedBoards = filteredBoards.slice(startIndex, endIndex);
+                const paginatedBoards = filteredBoards.slice(
+                  startIndex,
+                  endIndex,
+                );
 
                 return (
                   <>
                     <div className="cards-grid">
-                      {(userRole === "ADMIN" || userRole === "MANAGER") && currentPage === 1 && (
-                        <button
-                          type="button"
-                          className="dash-card dash-card--add"
-                          onClick={() => setShowCreateBoard(true)}
-                        >
-                          <div className="add-card-icon">+</div>
-                          <div className="add-card-label">Add board</div>
-                        </button>
-                      )}
+                      {(userRole === "ADMIN" || userRole === "MANAGER") &&
+                        currentPage === 1 && (
+                          <button
+                            type="button"
+                            className="dash-card dash-card--add"
+                            onClick={() => setShowCreateBoard(true)}
+                          >
+                            <div className="add-card-icon">+</div>
+                            <div className="add-card-label">Add board</div>
+                          </button>
+                        )}
                       {paginatedBoards.map((board) => (
                         <BoardCard
                           key={board.id}
@@ -1475,7 +1416,9 @@ function Dashboard() {
                       <div className="pagination">
                         <button
                           className="pagination-btn"
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
                           disabled={currentPage === 1}
                         >
                           ← Previous
@@ -1485,7 +1428,9 @@ function Dashboard() {
                         </div>
                         <button
                           className="pagination-btn"
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
                           disabled={currentPage === totalPages}
                         >
                           Next →
@@ -1508,14 +1453,19 @@ function Dashboard() {
                         <div className="empty-state">
                           {userRole === "MEMBER" ? (
                             <>
-                              <h3 className="empty-title">No boards assigned yet</h3>
+                              <h3 className="empty-title">
+                                No boards assigned yet
+                              </h3>
                               <p className="empty-desc">
-                                You haven't been assigned to any boards yet. Please wait for your team administrator to add you to a board, or contact them for access.
+                                You haven't been assigned to any boards yet.
+                                Please wait for your team administrator to add
+                                you to a board, or contact them for access.
                               </p>
                             </>
                           ) : (
                             <p className="empty-desc" style={{ marginTop: 8 }}>
-                              No boards yet. Create your first board to get started!
+                              No boards yet. Create your first board to get
+                              started!
                             </p>
                           )}
                         </div>
@@ -1538,20 +1488,23 @@ function Dashboard() {
       {showCreateBoard && (
         <div
           className="modal-backdrop"
-          onClick={() => !creating && setShowCreateBoard(false)}
+          onClick={() => !creating && handleCloseCreateBoard()}
         >
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2 className="modal-title">Create Board</h2>
               <button
                 className="modal-close"
-                onClick={() => setShowCreateBoard(false)}
+                onClick={handleCloseCreateBoard}
                 disabled={creating}
               >
                 ×
               </button>
             </header>
-            <form className="modal-body" onSubmit={handleCreateBoardWithTemplate}>
+            <form
+              className="modal-body"
+              onSubmit={handleCreateBoardWithTemplate}
+            >
               <label className="field-group">
                 <span className="field-label">Name</span>
                 <input
@@ -1679,7 +1632,7 @@ function Dashboard() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setShowCreateBoard(false)}
+                  onClick={handleCloseCreateBoard}
                   disabled={creating}
                 >
                   Cancel

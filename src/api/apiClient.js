@@ -1,12 +1,6 @@
-/**
- * API Client
- * Centralized HTTP client with authentication and error handling
- */
-import API_CONFIG from './config';
 
-/**
- * Get authentication headers
- */
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://tickett-management-backend.onrender.com";
+
 function getAuthHeaders() {
   const token = localStorage.getItem('token');
   return {
@@ -15,9 +9,7 @@ function getAuthHeaders() {
   };
 }
 
-/**
- * Handle API response
- */
+/*Handle API response*/
 async function handleResponse(response) {
   const contentType = response.headers.get('content-type');
   const isJson = contentType && contentType.includes('application/json');
@@ -36,106 +28,85 @@ async function handleResponse(response) {
     throw error;
   }
 
-  return {
-    ok: true,
-    status: response.status,
-    data: data,
-  };
+  return data;
 }
-
-/**
- * API Client
- */
-const apiClient = {
-  /**
-   * GET request
-   */
+const api = {
   async get(endpoint, options = {}) {
     try {
-      const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: getAuthHeaders(),
         ...options,
+        headers: {
+          ...getAuthHeaders(),
+          ...(options.headers || {}),
+        },
       });
       return await handleResponse(response);
     } catch (error) {
       console.error('GET request failed:', endpoint, error);
-      return {
-        ok: false,
-        error: error.message,
-        message: error.message,
-      };
+      throw error;
     }
   },
 
-  /**
-   * POST request
-   */
+  /*POST request*/
   async post(endpoint, body, options = {}) {
     try {
-      const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(body),
         ...options,
+        headers: {
+          ...getAuthHeaders(),
+          ...(options.headers || {}),
+        },
+        body: JSON.stringify(body),
       });
       return await handleResponse(response);
     } catch (error) {
       console.error('POST request failed:', endpoint, error);
-      return {
-        ok: false,
-        error: error.message,
-        message: error.message,
-      };
+      throw error;
     }
   },
 
-  /**
-   * PUT request
-   */
+  /*PUT request*/
   async put(endpoint, body, options = {}) {
     try {
-      const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
         method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(body),
         ...options,
+        headers: {
+          ...getAuthHeaders(),
+          ...(options.headers || {}),
+        },
+        body: JSON.stringify(body),
       });
       return await handleResponse(response);
     } catch (error) {
       console.error('PUT request failed:', endpoint, error);
-      return {
-        ok: false,
-        error: error.message,
-        message: error.message,
-      };
+      throw error;
     }
   },
 
-  /**
-   * DELETE request
-   */
+  /*DELETE request*/
   async delete(endpoint, options = {}) {
     try {
-      const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
         ...options,
+        headers: {
+          ...getAuthHeaders(),
+          ...(options.headers || {}),
+        },
       });
       return await handleResponse(response);
     } catch (error) {
       console.error('DELETE request failed:', endpoint, error);
-      return {
-        ok: false,
-        error: error.message,
-        message: error.message,
-      };
+      throw error;
     }
   },
 };
 
-export default apiClient;
+export default api;

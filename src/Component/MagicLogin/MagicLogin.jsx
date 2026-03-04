@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '../../api';
 import './magicLogin.css';
 
 function MagicLogin() {
@@ -19,13 +20,7 @@ function MagicLogin() {
     }
 
     // Call backend magic login endpoint
-    fetch(`http://localhost:8080/api/auth/magic-login?token=${token}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error('Invalid or expired token');
-        }
-        return response.json();
-      })
+    api.get(`/api/auth/magic-login?token=${token}`)
       .then((data) => {
         console.log('Magic login successful:', data);
         

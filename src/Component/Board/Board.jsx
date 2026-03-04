@@ -11,6 +11,7 @@ import {
   FiSliders,
 } from "react-icons/fi";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../../api";
 import "./board.css";
 
 const SORT_OPTIONS = [
@@ -112,7 +113,7 @@ function MobileNavMenu({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Close menu on ESC
+  
   useEffect(() => {
     function handleKey(e) {
       if (e.key === "Escape") {
@@ -268,10 +269,10 @@ function Board() {
   const [commentInputs, setCommentInputs] = useState({});
   const [postingCommentCard, setPostingCommentCard] = useState(null);
   
-  // Voting state
-  const [userVotesByCard, setUserVotesByCard] = useState({}); // {cardId: voteCount}
+
+  const [userVotesByCard, setUserVotesByCard] = useState({}); 
   const [remainingVotes, setRemainingVotes] = useState(6);
-  const [cardVoteCounts, setCardVoteCounts] = useState({}); // {cardId: totalCount}
+  const [cardVoteCounts, setCardVoteCounts] = useState({}); 
   
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editCommentValue, setEditCommentValue] = useState("");
@@ -288,8 +289,7 @@ function Board() {
   const currentUserId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("role") || "MEMBER";
 
-  // Check if current user is the board creator OR is an ADMIN
-  // Handle both direct ID and nested object cases
+  
   const isCreator = board && currentUserId && (
     String(board.userId) === String(currentUserId) ||
     String(board.createdBy?.id) === String(currentUserId) ||
@@ -299,10 +299,10 @@ function Board() {
     String(board.created_by) === String(currentUserId)
   );
   
-  // ADMIN can do everything on any board
+  
   const canManageBoard = userRole === "ADMIN" || isCreator;
 
-  // Debug logging (remove after testing)
+  
   useEffect(() => {
     if (board) {
       console.log("Board data:", board);
@@ -331,15 +331,13 @@ function Board() {
 
   useEffect(() => {
     fetchBoard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId]);
 
-  // Fetch voting info when board and cards are loaded
+  
   useEffect(() => {
     if (board && board.id && Object.keys(cards).length > 0) {
       fetchUserVotingInfo();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, cards]);
 
   useEffect(() => {
@@ -351,36 +349,16 @@ function Board() {
   async function fetchBoard() {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const boardResponse = await fetch(
-        `http://localhost:8080/api/boards/${boardId}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-      const boardData = await boardResponse.json().catch(() => ({}));
-      if (!boardResponse.ok)
-        throw new Error(boardData.message || "Failed to load board");
+      
+      const boardData = await api.get(`/api/boards/${boardId}`);
       setBoard(boardData);
 
-      const columnsResponse = await fetch(
-        `http://localhost:8080/api/board-columns/board/${boardId}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-      const columnsData = await columnsResponse.json().catch(() => []);
+      const columnsData = await api.get(`/api/board-columns/board/${boardId}`);
       const sortedColumns = Array.isArray(columnsData)
         ? columnsData.sort((a, b) => (a.position || 0) - (b.position || 0))
         : [];
       setColumns(sortedColumns);
-      await fetchAllCards(token, sortedColumns);
+      await fetchAllCards(sortedColumns);
     } catch (err) {
       setError(err.message || "Failed to load board");
     } finally {
@@ -388,35 +366,17 @@ function Board() {
     }
   }
 
-  async function fetchAllCards(token, cols = []) {
+  async function fetchAllCards(cols = []) {
     try {
       const cardsByColumn = {};
       if (cols && cols.length > 0) {
         for (const col of cols) {
-          const res = await fetch(
-            `http://localhost:8080/api/cards/column/${col.id}`,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-            },
-          );
-          const data = await res.json().catch(() => []);
+          const data = await api.get(`/api/cards/column/${col.id}`);
           cardsByColumn[String(col.id)] = Array.isArray(data) ? data : [];
         }
       } else {
-        const cardsResponse = await fetch(
-          `http://localhost:8080/api/cards/board/${boardId}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          },
-        );
-        const cardsData = await cardsResponse.json().catch(() => []);
-        if (cardsResponse.ok && Array.isArray(cardsData)) {
+        const cardsData = await api.get(`/api/cards/board/${boardId}`);
+        if (Array.isArray(cardsData)) {
           cardsData.forEach((card) => {
             const colId =
               card.columnId != null ? String(card.columnId) : "undefined";
@@ -431,169 +391,70 @@ function Board() {
       setCards({});
     }
   }
-
-  // Fetch user's voting info for the board
   async function fetchUserVotingInfo() {
     const userId = localStorage.getItem("userId");
-    const token = localStorage.getItem("token");
     if (!userId || !boardId) return;
 
     console.log("=== FETCHING VOTES ===");
     console.log("BoardId:", boardId, "UserId:", userId);
 
     try {
-      // Get remaining votes
-      const remainingRes = await fetch(
-        `http://localhost:8080/api/votes/board/${boardId}/user/${userId}/remaining`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
+      const remainingData = await api.get(`/api/votes/board/${boardId}/user/${userId}/remaining`);
+      console.log("Remaining votes data:", remainingData);
+      setRemainingVotes(remainingData.remaining || 6);
+      const votesData = await api.get(`/api/votes/board/${boardId}`);
+      console.log("Board votes data:", votesData);
       
-      console.log("Remaining votes response status:", remainingRes.status);
+      const voteCounts = {};
+      const userVoteCounts = {};
       
-      if (remainingRes.ok) {
-        const data = await remainingRes.json();
-        console.log("Remaining votes data:", data);
-        setRemainingVotes(data.remaining || 6);
-      }
-
-      // Get all board votes to update card counts
-      const boardVotesRes = await fetch(
-        `http://localhost:8080/api/votes/board/${boardId}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
-
-      console.log("Board votes response status:", boardVotesRes.status);
-
-      if (boardVotesRes.ok) {
-        const votesData = await boardVotesRes.json();
-        console.log("Board votes data:", votesData);
+      if (Array.isArray(votesData)) {
+        console.log("Processing", votesData.length, "vote records");
         
-        const voteCounts = {};
-        const userVoteCounts = {};
-        
-        if (Array.isArray(votesData)) {
-          console.log("Processing", votesData.length, "vote records");
+        votesData.forEach(vote => {
+          console.log("Vote record:", vote);
           
-          votesData.forEach(vote => {
-            console.log("Vote record:", vote);
-            
-            // Count total votes per card
-            const cardId = vote.cardId || vote.card_id;
-            if (cardId) {
-              voteCounts[cardId] = (voteCounts[cardId] || 0) + 1;
-            }
-            
-            // Count user's votes per card
-            const voteUserId = vote.userId || vote.user_id;
-            if (voteUserId === parseInt(userId, 10) && cardId) {
-              userVoteCounts[cardId] = (userVoteCounts[cardId] || 0) + 1;
-            }
-          });
-          
-          console.log("Final vote counts:", voteCounts);
-          console.log("Final user vote counts:", userVoteCounts);
-        } else {
-          console.warn("Votes data is not an array:", votesData);
-        }
+          const cardId = vote.cardId || vote.card_id;
+          if (cardId) {
+            voteCounts[cardId] = (voteCounts[cardId] || 0) + 1;
+          }
         
-        setCardVoteCounts(voteCounts);
-        setUserVotesByCard(userVoteCounts);
+          const voteUserId = vote.userId || vote.user_id;
+          if (voteUserId === parseInt(userId, 10) && cardId) {
+            userVoteCounts[cardId] = (userVoteCounts[cardId] || 0) + 1;
+          }
+        });
+      
       } else {
-        const errorText = await boardVotesRes.text();
-        console.error("Failed to fetch board votes:", errorText);
+        console.warn("Votes data is not an array:", votesData);
       }
       
-      console.log("=== END FETCHING VOTES ===");
+      setCardVoteCounts(voteCounts);
+      setUserVotesByCard(userVoteCounts);
+      
+     
     } catch (err) {
       console.error("Error fetching voting info:", err);
     }
   }
-
-  // Add vote to a card (can vote multiple times)
   async function addVote(cardId) {
     const userId = localStorage.getItem("userId");
-    const token = localStorage.getItem("token");
     if (!userId) return alert("You must be logged in to vote");
 
     if (remainingVotes <= 0) {
       return alert("You have used all your votes!");
     }
-
-    // Ensure all IDs are numbers
     const cardIdNum = parseInt(cardId, 10);
     const userIdNum = parseInt(userId, 10);
     const boardIdNum = parseInt(boardId, 10);
 
-    console.log("=== VOTE DEBUG ===");
-    console.log("CardId:", cardIdNum, "UserId:", userIdNum, "BoardId:", boardIdNum);
-    console.log("Token present:", !!token);
-
-    // Try different endpoint formats based on backend documentation
-    // Format 1: POST /api/votes with body
-    const url1 = `http://localhost:8080/api/votes`;
-    const body1 = { cardId: cardIdNum, userId: userIdNum, boardId: boardIdNum };
-    
-    // Format 2: POST /api/votes/card/{cardId}/user/{userId} (from earlier backend docs)
-    const url2 = `http://localhost:8080/api/votes/card/${cardIdNum}/user/${userIdNum}`;
-    const body2 = { boardId: boardIdNum };
-
-    // Try Format 1 first
-    console.log("Trying Format 1 - URL:", url1);
-    console.log("Trying Format 1 - Body:", body1);
-
     try {
-      let res = await fetch(url1, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(body1),
-      });
+      const body = { cardId: cardIdNum, userId: userIdNum, boardId: boardIdNum };
+      console.log("Adding vote with body:", body);
 
-      console.log("Format 1 response status:", res.status);
-
-      // If Format 1 fails with 400 or 404, try Format 2
-      if (!res.ok && (res.status === 400 || res.status === 404)) {
-        console.log("Format 1 failed, trying Format 2 - URL:", url2);
-        console.log("Format 2 - Body:", body2);
-        
-        res = await fetch(url2, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(body2),
-        });
-        
-        console.log("Format 2 response status:", res.status);
-      }
-
-      // Get response text
-      const responseText = await res.text();
-      console.log("Vote response body:", responseText);
-
-      if (res.ok) {
-        let data = {};
-        try {
-          data = responseText ? JSON.parse(responseText) : {};
-        } catch (e) {
-          console.log("Response is not JSON, treating as success");
-        }
-        console.log("Vote added successfully:", data);
-        
-        // Update local state - increment counts
+      try {
+        await api.post("/api/votes", body);
+        console.log("Vote added successfully");
         setUserVotesByCard(prev => ({
           ...prev,
           [cardId]: (prev[cardId] || 0) + 1
@@ -603,36 +464,29 @@ function Board() {
           ...prev,
           [cardId]: (prev[cardId] || 0) + 1
         }));
-      } else {
-        console.error("Vote failed - Status:", res.status);
-        console.error("Vote failed - Response:", responseText);
-        
-        // Try to parse error message
-        let errorMessage = `Failed to add vote (${res.status})`;
-        try {
-          const error = JSON.parse(responseText);
-          console.error("Vote failed - Parsed error:", error);
-          errorMessage = error.message || error.error || errorMessage;
-        } catch {
-          if (responseText) {
-            errorMessage = responseText;
-          }
-        }
-        
-        alert(errorMessage);
+      } catch (err) {
+      
+        console.log("Format 1 failed, trying Format 2");
+        await api.post(`/api/votes/card/${cardIdNum}/user/${userIdNum}`, { boardId: boardIdNum });
+        setUserVotesByCard(prev => ({
+          ...prev,
+          [cardId]: (prev[cardId] || 0) + 1
+        }));
+        setRemainingVotes(prev => prev - 1);
+        setCardVoteCounts(prev => ({
+          ...prev,
+          [cardId]: (prev[cardId] || 0) + 1
+        }));
       }
+      
       console.log("=== END VOTE DEBUG ===");
     } catch (err) {
       console.error("Error adding vote:", err);
-      console.error("Error stack:", err.stack);
       alert("Failed to add vote: " + err.message);
     }
   }
-
-  // Remove one vote from a card
   async function removeVote(cardId) {
     const userId = localStorage.getItem("userId");
-    const token = localStorage.getItem("token");
     if (!userId) return alert("You must be logged in to vote");
 
     const userVoteCount = userVotesByCard[cardId] || 0;
@@ -640,7 +494,6 @@ function Board() {
       return alert("You haven't voted on this card");
     }
 
-    // Ensure all IDs are numbers
     const voteData = {
       cardId: parseInt(cardId, 10),
       userId: parseInt(userId, 10),
@@ -649,36 +502,17 @@ function Board() {
     console.log("Removing vote:", voteData);
 
     try {
-      const res = await fetch(`http://localhost:8080/api/votes`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(voteData),
-      });
-
-      console.log("Remove vote response status:", res.status);
-
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.log("Vote removed successfully:", data);
-        
-        // Update local state - decrement counts
-        setUserVotesByCard(prev => ({
-          ...prev,
-          [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
-        }));
-        setRemainingVotes(prev => prev + 1);
-        setCardVoteCounts(prev => ({
-          ...prev,
-          [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
-        }));
-      } else {
-        const error = await res.json().catch(() => ({ message: "Unknown error" }));
-        console.error("Remove vote failed:", error);
-        alert(error.message || "Failed to remove vote");
-      }
+      await api.delete("/api/votes", { body: JSON.stringify(voteData) });
+      console.log("Vote removed successfully");
+      setUserVotesByCard(prev => ({
+        ...prev,
+        [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
+      }));
+      setRemainingVotes(prev => prev + 1);
+      setCardVoteCounts(prev => ({
+        ...prev,
+        [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
+      }));
     } catch (err) {
       console.error("Error removing vote:", err);
       alert("Failed to remove vote: " + err.message);
@@ -704,25 +538,15 @@ function Board() {
     if (!inputValue.trim()) return alert("Please enter something for the card");
     setSavingCard(true);
     try {
-      const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
-      const res = await fetch("http://localhost:8080/api/cards", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          content: inputValue,
-          columnId,
-          userId,
-          boardId,
-        }),
+      const created = await api.post("/api/cards", {
+        content: inputValue,
+        columnId,
+        userId,
+        boardId,
       });
-      const created = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(created.message || "Failed to create card");
       removeCardForm(formId);
-      await fetchAllCards(localStorage.getItem("token"), columns);
+      await fetchAllCards(columns);
     } catch (err) {
       alert("Error creating card: " + (err.message || "Unknown"));
     } finally {
@@ -737,26 +561,11 @@ function Board() {
     if (!newColumnTitle.trim()) return alert("Please enter a column title");
     setAddingColumn(true);
     try {
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(
-        `http://localhost:8080/api/board-columns/${boardId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            boardId: Number(boardId),
-            title: newColumnTitle.trim(),
-            position: columns.length,
-          }),
-        },
-      );
-      
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Failed to add column");
+      await api.post(`/api/board-columns/${boardId}`, {
+        boardId: Number(boardId),
+        title: newColumnTitle.trim(),
+        position: columns.length,
+      });
       
       setNewColumnTitle("");
       setShowAddColumn(false);
@@ -775,32 +584,13 @@ function Board() {
     if (!editColumnTitle.trim()) return alert("Column title cannot be empty");
 
     try {
-      const token = localStorage.getItem("token");
-
       const requestBody = {
         title: editColumnTitle.trim(),
       };
 
       console.log("Sending update request:", requestBody);
 
-      const res = await fetch(
-        `http://localhost:8080/api/board-columns/${columnId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(requestBody),
-        },
-      );
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        console.error("Update column error:", data);
-        throw new Error(data.message || "Update failed");
-      }
+      const data = await api.put(`/api/board-columns/${columnId}`, requestBody);
 
       console.log("Column updated successfully:", data);
       console.log("Title in response:", data.title);
@@ -808,8 +598,6 @@ function Board() {
       setEditingColumnId(null);
       setEditColumnTitle("");
       setOpenColumnMenu(null);
-
-      // Refetch board to ensure UI is in sync
       await fetchBoard();
     } catch (err) {
       console.error("Error updating column:", err);
@@ -827,22 +615,7 @@ function Board() {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(
-        `http://localhost:8080/api/board-columns/${columnId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-
-      if (!res.ok) throw new Error("Delete failed");
-
-      // Remove column from UI instantly
+      await api.delete(`/api/board-columns/${columnId}`);
       setColumns((prev) => prev.filter((col) => col.id !== columnId));
       setCards((prev) => {
         const updated = { ...prev };
@@ -857,17 +630,7 @@ function Board() {
 
   async function fetchCommentsFor(cardId) {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:8080/api/comments/card/${cardId}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-      const data = await res.json().catch(() => []);
+      const data = await api.get(`/api/comments/card/${cardId}`);
       setCommentsByCard((p) => ({
         ...p,
         [String(cardId)]: Array.isArray(data) ? data : [],
@@ -883,18 +646,8 @@ function Board() {
     if (!content) return alert("Please enter a comment");
     setPostingCommentCard(key);
     try {
-      const token = localStorage.getItem("token");
       const userId = localStorage.getItem("userId");
-      const res = await fetch("http://localhost:8080/api/comments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ cardId, userId, content }),
-      });
-      const result = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(result.message || "Failed to post comment");
+      await api.post("/api/comments", { cardId, userId, content });
       setCommentInputs((p) => ({ ...p, [key]: "" }));
       await fetchCommentsFor(cardId);
     } catch (err) {
@@ -934,20 +687,7 @@ function Board() {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8080/api/boards/${boardId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to delete board");
-      }
-
+      await api.delete(`/api/boards/${boardId}`);
       navigate("/retroDashboard");
     } catch (err) {
       alert("Error deleting board: " + (err.message || "Unknown"));
@@ -961,17 +701,7 @@ function Board() {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`http://localhost:8080/api/cards/${cardId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (!res.ok) throw new Error("Failed to delete");
+      await api.delete(`/api/cards/${cardId}`);
 
       setCards((prev) => {
         const updated = {};
@@ -986,26 +716,14 @@ function Board() {
       alert("Error deleting card");
     }
   }
+
   async function updateCard(cardId, columnId) {
     if (!editValue.trim()) return alert("Card cannot be empty");
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`http://localhost:8080/api/cards/${cardId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          content: editValue,
-        }),
+      const updatedCard = await api.put(`/api/cards/${cardId}`, {
+        content: editValue,
       });
-
-      if (!res.ok) throw new Error("Update failed");
-
-      const updatedCard = await res.json();
 
       setCards((prev) => ({
         ...prev,
@@ -1025,20 +743,7 @@ function Board() {
     if (!confirmDelete) return;
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(
-        `http://localhost:8080/api/comments/${commentId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        },
-      );
-
-      if (!res.ok) throw new Error("Delete failed");
+      await api.delete(`/api/comments/${commentId}`);
 
       setCommentsByCard((prev) => ({
         ...prev,
@@ -1055,25 +760,9 @@ function Board() {
     if (!editCommentValue.trim()) return alert("Comment cannot be empty");
 
     try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(
-        `http://localhost:8080/api/comments/${commentId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            content: editCommentValue,
-          }),
-        },
-      );
-
-      if (!res.ok) throw new Error("Update failed");
-
-      const updatedComment = await res.json();
+      const updatedComment = await api.put(`/api/comments/${commentId}`, {
+        content: editCommentValue,
+      });
 
       setCommentsByCard((prev) => ({
         ...prev,
@@ -1098,7 +787,7 @@ function Board() {
   return (
     <div className="board-container">
       <header className="board-header">
-        {/* ── Mobile hamburger menu (left side on mobile) ── */}
+  
         <div className="mobile-only">
           <MobileNavMenu
             onAddColumn={() => setShowAddColumn(true)}

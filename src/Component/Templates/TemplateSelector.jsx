@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { templateService } from '../api';
+import api from '../../api';
 import './TemplateSelector.css';
 
 const CATEGORIES = [
   { value: 'All', label: 'All' },
-  { value: 'Retrospective', label: 'Retrospective' },
-  { value: 'Design thinking / UX', label: 'Design thinking / UX' },
+  { value: 'Classic Agile Retrospective', label: 'Classic Agile Retrospective' },
   { value: 'Team management', label: 'Team management' },
-  { value: 'Retrospective', label: 'Retrospective' },
   { value: 'Project management', label: 'Project management' },
   { value: 'Product management', label: 'Product management' },
   { value: 'Team building', label: 'Team building' },
@@ -43,21 +41,17 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
     setError('');
     
     try {
-      let response;
+      let data;
       
       if (selectedCategory !== 'All') {
-        response = await templateService.getTemplatesByCategory(selectedCategory);
+        data = await api.get(`/api/templates/category/${selectedCategory}`);
       } else if (selectedLanguage !== 'All') {
-        response = await templateService.getTemplatesByLanguage(selectedLanguage);
+        data = await api.get(`/api/templates/language/${selectedLanguage}`);
       } else {
-        response = await templateService.getAllTemplates();
+        data = await api.get('/api/templates');
       }
 
-      if (response.ok) {
-        setTemplates(response.data);
-      } else {
-        setError(response.message || 'Failed to load templates');
-      }
+      setTemplates(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to load templates');
     } finally {
@@ -95,10 +89,9 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
         </div>
 
         <div className="template-modal-body">
-          {/* Left Sidebar */}
           <div className="template-sidebar">
             <div className="template-nav-section">
-              <h3>Board info</h3>
+              <h3>Template info</h3>
               <button className="template-nav-item active">
                 Choose existing template
               </button>
