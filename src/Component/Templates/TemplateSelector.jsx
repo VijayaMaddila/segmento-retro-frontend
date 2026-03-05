@@ -1,26 +1,29 @@
+
 import { useState, useEffect } from 'react';
 import api from '../../api';
 import './TemplateSelector.css';
 
 const CATEGORIES = [
   { value: 'All', label: 'All' },
-  { value: 'Classic Agile Retrospective', label: 'Classic Agile Retrospective' },
-  { value: 'Team management', label: 'Team management' },
-  { value: 'Project management', label: 'Project management' },
-  { value: 'Product management', label: 'Product management' },
-  { value: 'Team building', label: 'Team building' },
-  { value: 'Brainstorm', label: 'Brainstorm' },
+  { value: 'Classic', label: 'Classic' },
+  { value: 'Agile', label: 'Agile' },
+  { value: 'Team Management', label: 'Team Management' },
+  { value: 'Team Building', label: 'Team Building' },
+  { value: 'Project Management', label: 'Project Management' },
+  { value: 'Product Management', label: 'Product Management' },
   { value: 'Personal', label: 'Personal' },
   { value: 'Icebreakers', label: 'Icebreakers' },
-  { value: 'Decision making', label: 'Decision making' },
+  { value: 'Decision Making', label: 'Decision Making' },
 ];
 
 const LANGUAGES = [
   { value: 'All', label: 'All' },
-  { value: 'Portuguese', label: 'Portuguese' },
-  { value: 'English', label: 'English' },
-  { value: 'Spanish', label: 'Spanish' },
-  { value: 'French', label: 'French' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'hi', label: 'Hindi' },
 ];
 
 function TemplateSelector({ onSelectTemplate, onClose }) {
@@ -33,6 +36,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   useEffect(() => {
+    setSelectedTemplate(null); // Clear selected template when filters change
     fetchTemplates();
   }, [selectedCategory, selectedLanguage]);
 
@@ -43,17 +47,58 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
     try {
       let data;
       
-      if (selectedCategory !== 'All') {
-        data = await api.get(`/api/templates/category/${selectedCategory}`);
-      } else if (selectedLanguage !== 'All') {
-        data = await api.get(`/api/templates/language/${selectedLanguage}`);
-      } else {
+      console.log('Fetching templates with filters:', { selectedCategory, selectedLanguage });
+      
+      // Both category and language selected
+      if (selectedCategory !== 'All' && selectedLanguage !== 'All') {
+        const encodedCategory = encodeURIComponent(selectedCategory);
+        const encodedLanguage = encodeURIComponent(selectedLanguage);
+        const url = `/api/templates/category/${encodedCategory}/language/${encodedLanguage}`;
+        console.log('Fetching URL:', url);
+        data = await api.get(url);
+      } 
+      // Only category selected
+      else if (selectedCategory !== 'All') {
+        const encodedCategory = encodeURIComponent(selectedCategory);
+        const url = `/api/templates/category/${encodedCategory}`;
+        console.log('Fetching URL:', url);
+        data = await api.get(url);
+      } 
+      // Only language selected
+      else if (selectedLanguage !== 'All') {
+        const encodedLanguage = encodeURIComponent(selectedLanguage);
+        const url = `/api/templates/language/${encodedLanguage}`;
+        console.log('Fetching URL:', url);
+        data = await api.get(url);
+      } 
+      // No filters - get all templates
+      else {
+        console.log('Fetching URL: /api/templates');
         data = await api.get('/api/templates');
       }
 
+      console.log('Templates response:', data);
+      console.log('Is array?', Array.isArray(data));
+      console.log('Length:', Array.isArray(data) ? data.length : 'not an array');
+      
       setTemplates(Array.isArray(data) ? data : []);
+      
+      if (Array.isArray(data) && data.length === 0) {
+        console.warn('No templates found for filters:', { selectedCategory, selectedLanguage });
+      }
     } catch (err) {
-      setError(err.message || 'Failed to load templates');
+      console.error('Error fetching templates:', err);
+      console.error('Error status:', err.status);
+      console.error('Error data:', err.data);
+      
+      // Show user-friendly error message
+      if (err.status === 401) {
+        setError('Please login to view templates');
+      } else if (err.status === 404) {
+        setError('No templates found for this category');
+      } else {
+        setError(err.message || 'Failed to load templates');
+      }
     } finally {
       setLoading(false);
     }
@@ -69,6 +114,8 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
   });
 
   const handleTemplateClick = (template) => {
+    console.log('Template clicked:', template);
+    console.log('Template columns:', template.columns);
     setSelectedTemplate(template);
   };
 
@@ -185,13 +232,18 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                 <div className="template-preview-image">
                   {/* Template visual preview */}
                   <div className="template-columns-preview">
-                    {selectedTemplate.columns?.map((col, idx) => (
+                    {selectedTemplate.columns?.slice(0, 10).map((col, idx) => (
                       <div key={idx} className="template-column-card" style={{
                         background: `hsl(${(idx * 60) % 360}, 70%, 85%)`
                       }}>
                         <div className="template-column-title">{col.name || col.title}</div>
                       </div>
                     ))}
+                    {selectedTemplate.columns?.length > 10 && (
+                      <div className="template-column-card" style={{ background: '#f0f0f0' }}>
+                        <div className="template-column-title">+{selectedTemplate.columns.length - 10} more</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -199,11 +251,18 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                   <h3>{selectedTemplate.title}</h3>
                   
                   {selectedTemplate.columns && (
-                    <ul className="template-preview-list">
-                      {selectedTemplate.columns.map((col, idx) => (
-                        <li key={idx}>{col.name || col.title}</li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="template-preview-list">
+                        {selectedTemplate.columns.slice(0, 10).map((col, idx) => (
+                          <li key={idx}>{col.name || col.title}</li>
+                        ))}
+                      </ul>
+                      {selectedTemplate.columns.length > 10 && (
+                        <p style={{ color: '#999', fontSize: '12px', marginTop: '8px' }}>
+                          ... and {selectedTemplate.columns.length - 10} more columns
+                        </p>
+                      )}
+                    </>
                   )}
 
                   <p className="template-preview-description">
