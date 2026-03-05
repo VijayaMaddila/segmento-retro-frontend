@@ -80,7 +80,7 @@ function CreateTemplateModal({ onClose, onCreated }) {
 
   function updateColumn(uid, value) {
     setColumns((p) =>
-      p.map((c) => (c.uid === uid ? { ...c, name: value } : c))
+      p.map((c) => (c.uid === uid ? { ...c, name: value } : c)),
     );
   }
 
@@ -117,7 +117,9 @@ function CreateTemplateModal({ onClose, onCreated }) {
       >
         <header className="modal-header">
           <h2 className="modal-title">Create Custom Template</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </header>
 
         <div className="modal-body">
@@ -152,7 +154,9 @@ function CreateTemplateModal({ onClose, onCreated }) {
               onChange={(e) => setCategory(e.target.value)}
             >
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
             </select>
           </label>
@@ -165,7 +169,9 @@ function CreateTemplateModal({ onClose, onCreated }) {
               onChange={(e) => setLanguage(e.target.value)}
             >
               {languages.map((lang) => (
-                <option key={lang} value={lang}>{lang}</option>
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
               ))}
             </select>
           </label>
@@ -193,8 +199,15 @@ function CreateTemplateModal({ onClose, onCreated }) {
                 </div>
               ))}
             </div>
-            <button className="link-btn" style={{ marginTop: 6 }} onClick={addColumn}>
-              <FiPlus size={12} style={{ marginRight: 4, verticalAlign: "middle" }} />
+            <button
+              className="link-btn"
+              style={{ marginTop: 6 }}
+              onClick={addColumn}
+            >
+              <FiPlus
+                size={12}
+                style={{ marginRight: 4, verticalAlign: "middle" }}
+              />
               Add column
             </button>
           </div>
@@ -202,10 +215,18 @@ function CreateTemplateModal({ onClose, onCreated }) {
           {error && <p className="field-error">{error}</p>}
 
           <footer className="modal-footer">
-            <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            <button
+              className="btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
               {saving ? "Creating…" : "Create Template"}
             </button>
-            <button className="btn-secondary" onClick={onClose} disabled={saving}>
+            <button
+              className="btn-secondary"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </button>
           </footer>
@@ -242,7 +263,7 @@ function CreateTeamModal({ onClose, onCreated }) {
       !selectedMembers.find((m) => m.id === u.id) &&
       (!memberSearch ||
         u.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-        u.email?.toLowerCase().includes(memberSearch.toLowerCase()))
+        u.email?.toLowerCase().includes(memberSearch.toLowerCase())),
   );
 
   function addMember(user) {
@@ -259,8 +280,10 @@ function CreateTeamModal({ onClose, onCreated }) {
     const email = emailInput.trim();
     if (!email) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return setError("Please enter a valid email address");
-    if (inviteEmails.includes(email)) return setError("This email is already added");
+    if (!emailRegex.test(email))
+      return setError("Please enter a valid email address");
+    if (inviteEmails.includes(email))
+      return setError("This email is already added");
     setInviteEmails((p) => [...p, email]);
     setEmailInput("");
     setError("");
@@ -285,9 +308,13 @@ function CreateTeamModal({ onClose, onCreated }) {
       if (inviteEmails.length > 0) {
         try {
           await api.post(`/api/teams/${data.id}/invite`, inviteEmails);
-          alert(`Team created! Invitation emails sent to ${inviteEmails.length} recipient(s).`);
+          alert(
+            `Team created! Invitation emails sent to ${inviteEmails.length} recipient(s).`,
+          );
         } catch {
-          alert("Team created, but failed to send invitation emails. Please try again later.");
+          alert(
+            "Team created, but failed to send invitation emails. Please try again later.",
+          );
         }
       } else {
         alert("Team created successfully!");
@@ -311,7 +338,9 @@ function CreateTeamModal({ onClose, onCreated }) {
       >
         <header className="modal-header">
           <h2 className="modal-title">Create Team</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>
+            ×
+          </button>
         </header>
 
         <div className="modal-body">
@@ -331,7 +360,9 @@ function CreateTeamModal({ onClose, onCreated }) {
             <span className="field-label">
               Add Members
               {allUsers.length > 0 && (
-                <span className="badge-muted">{allUsers.length} users available</span>
+                <span className="badge-muted">
+                  {allUsers.length} users available
+                </span>
               )}
             </span>
 
@@ -345,7 +376,11 @@ function CreateTeamModal({ onClose, onCreated }) {
                 onChange={(e) => setMemberSearch(e.target.value)}
               />
               {memberSearch && (
-                <button className="search-clear" type="button" onClick={() => setMemberSearch("")}>
+                <button
+                  className="search-clear"
+                  type="button"
+                  onClick={() => setMemberSearch("")}
+                >
                   <FiX size={12} />
                 </button>
               )}
@@ -358,7 +393,9 @@ function CreateTeamModal({ onClose, onCreated }) {
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="user-list-empty">
-                  {memberSearch ? `No users match "${memberSearch}"` : "No users available"}
+                  {memberSearch
+                    ? `No users match "${memberSearch}"`
+                    : "No users available"}
                 </div>
               ) : (
                 filteredUsers.map((user) => (
@@ -368,10 +405,14 @@ function CreateTeamModal({ onClose, onCreated }) {
                     className="user-list-item"
                     onClick={() => addMember(user)}
                   >
-                    <span className="user-avatar">{getInitials(user.name)}</span>
+                    <span className="user-avatar">
+                      {getInitials(user.name)}
+                    </span>
                     <span className="user-info">
                       <span className="user-name">{user.name}</span>
-                      {user.email && <span className="user-email">{user.email}</span>}
+                      {user.email && (
+                        <span className="user-email">{user.email}</span>
+                      )}
                     </span>
                     <span className="user-add-btn">+</span>
                   </button>
@@ -381,13 +422,19 @@ function CreateTeamModal({ onClose, onCreated }) {
 
             {selectedMembers.length > 0 && (
               <div className="selected-members">
-                <span className="selected-label">Selected ({selectedMembers.length})</span>
+                <span className="selected-label">
+                  Selected ({selectedMembers.length})
+                </span>
                 <div className="chip-wrap">
                   {selectedMembers.map((m) => (
                     <div key={m.id} className="member-chip">
                       <span className="chip-avatar">{getInitials(m.name)}</span>
                       <span className="chip-name">{m.name || m.email}</span>
-                      <button type="button" className="chip-remove" onClick={() => removeMember(m.id)}>
+                      <button
+                        type="button"
+                        className="chip-remove"
+                        onClick={() => removeMember(m.id)}
+                      >
                         <FiX size={11} />
                       </button>
                     </div>
@@ -399,7 +446,10 @@ function CreateTeamModal({ onClose, onCreated }) {
 
           <div className="field-group">
             <span className="field-label">Invite by Email</span>
-            <form onSubmit={handleAddEmail} style={{ display: "flex", gap: "8px" }}>
+            <form
+              onSubmit={handleAddEmail}
+              style={{ display: "flex", gap: "8px" }}
+            >
               <input
                 type="email"
                 className="field-input"
@@ -419,12 +469,18 @@ function CreateTeamModal({ onClose, onCreated }) {
 
             {inviteEmails.length > 0 && (
               <div className="selected-members" style={{ marginTop: "12px" }}>
-                <span className="selected-label">Email Invitations ({inviteEmails.length})</span>
+                <span className="selected-label">
+                  Email Invitations ({inviteEmails.length})
+                </span>
                 <div className="chip-wrap">
                   {inviteEmails.map((email) => (
                     <div key={email} className="member-chip">
                       <span className="chip-name">{email}</span>
-                      <button type="button" className="chip-remove" onClick={() => removeEmail(email)}>
+                      <button
+                        type="button"
+                        className="chip-remove"
+                        onClick={() => removeEmail(email)}
+                      >
                         <FiX size={11} />
                       </button>
                     </div>
@@ -437,10 +493,18 @@ function CreateTeamModal({ onClose, onCreated }) {
           {error && <p className="field-error">{error}</p>}
 
           <footer className="modal-footer">
-            <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            <button
+              className="btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+            >
               {saving ? "Creating…" : "Create Team"}
             </button>
-            <button className="btn-secondary" onClick={onClose} disabled={saving}>
+            <button
+              className="btn-secondary"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </button>
           </footer>
@@ -459,20 +523,27 @@ function BoardCard({ board, onClick, onDelete }) {
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setShowMenu(false);
     }
     if (showMenu) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
 
   return (
-    <div className="dash-card" style={{ background: bg, cursor: "pointer", position: "relative" }}>
+    <div
+      className="dash-card"
+      style={{ background: bg, cursor: "pointer", position: "relative" }}
+    >
       <div className="dash-card-accent" style={{ background: accent }} />
 
       <div className="card-menu-wrapper" ref={menuRef}>
         <button
           className="card-menu-btn"
-          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
         >
           ⋮
         </button>
@@ -480,13 +551,21 @@ function BoardCard({ board, onClick, onDelete }) {
           <div className="card-dropdown-menu">
             <button
               className="card-dropdown-item"
-              onClick={(e) => { e.stopPropagation(); setShowMenu(false); onClick(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onClick();
+              }}
             >
               <span>👁</span> Open Board
             </button>
             <button
               className="card-dropdown-item delete"
-              onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(board.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+                onDelete(board.id);
+              }}
             >
               <span>✕</span> Delete Board
             </button>
@@ -502,7 +581,10 @@ function BoardCard({ board, onClick, onDelete }) {
           <h3 className="dash-card-title">{board.title}</h3>
           {board.teamName ? (
             <span className="dash-card-meta" style={{ color: accent }}>
-              <FiUsers size={11} style={{ marginRight: 3, verticalAlign: "middle" }} />
+              <FiUsers
+                size={11}
+                style={{ marginRight: 3, verticalAlign: "middle" }}
+              />
               {board.teamName}
             </span>
           ) : board.templateName ? (
@@ -545,7 +627,10 @@ function TeamCard({ team, idx, isDeleting }) {
         <div className="dash-card-info">
           <h3 className="dash-card-title">{team.name}</h3>
           <span className="dash-card-meta" style={{ color: accent }}>
-            <FiUsers size={11} style={{ marginRight: 3, verticalAlign: "middle" }} />
+            <FiUsers
+              size={11}
+              style={{ marginRight: 3, verticalAlign: "middle" }}
+            />
             {memberCount} {memberCount === 1 ? "member" : "members"}
           </span>
         </div>
@@ -564,7 +649,9 @@ function TeamCard({ team, idx, isDeleting }) {
             </div>
           ))}
           {team.members.length > 4 && (
-            <div className="mini-avatar mini-avatar--more">+{team.members.length - 4}</div>
+            <div className="mini-avatar mini-avatar--more">
+              +{team.members.length - 4}
+            </div>
           )}
         </div>
       )}
@@ -583,8 +670,12 @@ function TeamsTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 18;
 
-  useEffect(() => { loadTeams(); }, []);
-  useEffect(() => { setCurrentPage(1); }, [searchQuery]);
+  useEffect(() => {
+    loadTeams();
+  }, []);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   async function loadTeams() {
     setLoading(true);
@@ -607,7 +698,7 @@ function TeamsTab() {
       team.members?.some(
         (m) =>
           m.name?.toLowerCase().includes(query) ||
-          m.email?.toLowerCase().includes(query)
+          m.email?.toLowerCase().includes(query),
       )
     );
   });
@@ -615,7 +706,7 @@ function TeamsTab() {
   const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
   const paginatedTeams = filteredTeams.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   return (
@@ -623,7 +714,9 @@ function TeamsTab() {
       <div className="tab-header">
         <div>
           <h1 className="page-title">Teams</h1>
-          <p className="page-subtitle">Manage your teams and collaborate with members</p>
+          <p className="page-subtitle">
+            Manage your teams and collaborate with members
+          </p>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className="search-container">
@@ -636,7 +729,10 @@ function TeamsTab() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button className="search-clear" onClick={() => setSearchQuery("")}>
+              <button
+                className="search-clear"
+                onClick={() => setSearchQuery("")}
+              >
                 <FiX size={14} />
               </button>
             )}
@@ -656,15 +752,27 @@ function TeamsTab() {
       {error && !loading && (
         <div className="error-banner">
           {error}
-          <button onClick={loadTeams} className="link-btn" style={{ marginLeft: 8 }}>Retry</button>
+          <button
+            onClick={loadTeams}
+            className="link-btn"
+            style={{ marginLeft: 8 }}
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {!loading && !error && teams.length === 0 && (
         <div className="empty-state">
-          <FiUsers size={40} color="#c0c8d8" style={{ marginBottom: 12, opacity: 0.6 }} />
+          <FiUsers
+            size={40}
+            color="#c0c8d8"
+            style={{ marginBottom: 12, opacity: 0.6 }}
+          />
           <h3 className="empty-title">No teams yet</h3>
-          <p className="empty-desc">Create your first team to start collaborating with colleagues</p>
+          <p className="empty-desc">
+            Create your first team to start collaborating with colleagues
+          </p>
           <button className="btn-create" onClick={() => setShowCreate(true)}>
             <FiPlus size={15} style={{ marginRight: 6 }} /> Create Team
           </button>
@@ -675,7 +783,10 @@ function TeamsTab() {
         <>
           <div className="cards-grid">
             {currentPage === 1 && (
-              <button className="dash-card dash-card--add" onClick={() => setShowCreate(true)}>
+              <button
+                className="dash-card dash-card--add"
+                onClick={() => setShowCreate(true)}
+              >
                 <div className="add-card-icon">+</div>
                 <div className="add-card-label">Create Team</div>
               </button>
@@ -698,10 +809,14 @@ function TeamsTab() {
               >
                 ← Previous
               </button>
-              <div className="pagination-info">Page {currentPage} of {totalPages}</div>
+              <div className="pagination-info">
+                Page {currentPage} of {totalPages}
+              </div>
               <button
                 className="pagination-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
                 disabled={currentPage === totalPages}
               >
                 Next →
@@ -710,7 +825,10 @@ function TeamsTab() {
           )}
 
           {filteredTeams.length === 0 && searchQuery && (
-            <p className="empty-desc" style={{ marginTop: 16, textAlign: "center" }}>
+            <p
+              className="empty-desc"
+              style={{ marginTop: 16, textAlign: "center" }}
+            >
               No teams match "{searchQuery}"
             </p>
           )}
@@ -742,7 +860,11 @@ function Dashboard() {
   const profileMenuRef = useRef(null);
 
   // ── User profile ──
-  const [userProfile, setUserProfile] = useState({ name: "Loading...", email: "", role: "MEMBER" });
+  const [userProfile, setUserProfile] = useState({
+    name: "Loading...",
+    email: "",
+    role: "MEMBER",
+  });
   const { name: userName, role: userRole } = userProfile;
 
   useEffect(() => {
@@ -771,17 +893,29 @@ function Dashboard() {
   // Close menus on outside click
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) setProfileMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setMenuOpen(false);
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target))
+        setProfileMenuOpen(false);
     }
-    if (menuOpen || profileMenuOpen) document.addEventListener("mousedown", handleClickOutside);
+    if (menuOpen || profileMenuOpen)
+      document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen, profileMenuOpen]);
 
   function handleTabSelect(tab) {
-    if (tab === "Analytics") { navigate("/analytics"); return; }
-    if (tab === "Integrations") { navigate("/integrations"); return; }
-    if (tab === "Teams") { navigate("/teams"); return; }
+    if (tab === "Analytics") {
+      navigate("/analytics");
+      return;
+    }
+    if (tab === "Integrations") {
+      navigate("/integrations");
+      return;
+    }
+    if (tab === "Teams") {
+      navigate("/teams");
+      return;
+    }
     if (userRole === "MEMBER" && tab !== "Dashboard") {
       alert("You don't have permission to access this section.");
       return;
@@ -792,7 +926,7 @@ function Dashboard() {
 
   function handleLogout() {
     ["token", "userId", "userName", "username", "name", "role"].forEach((k) =>
-      localStorage.removeItem(k)
+      localStorage.removeItem(k),
     );
     navigate("/login");
   }
@@ -836,8 +970,12 @@ function Dashboard() {
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [teamsError, setTeamsError] = useState("");
 
-  useEffect(() => { fetchUserBoards(); }, []);
-  useEffect(() => { setCurrentPage(1); }, [searchQuery]);
+  useEffect(() => {
+    fetchUserBoards();
+  }, []);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (showCreateBoard) {
@@ -862,7 +1000,12 @@ function Dashboard() {
   }
 
   async function handleDeleteBoard(boardId) {
-    if (!window.confirm("Are you sure you want to delete this board? All columns and cards will be permanently deleted.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this board? All columns and cards will be permanently deleted.",
+      )
+    )
+      return;
     try {
       await api.delete(`/api/boards/${boardId}`);
       setUserBoards((prev) => prev.filter((b) => b.id !== boardId));
@@ -910,7 +1053,6 @@ function Dashboard() {
     setBoardError("");
   }
 
-  // Single unified board creation handler — backend creates columns automatically via templateId
   async function handleCreateBoard(e) {
     e.preventDefault();
     setBoardError("");
@@ -924,7 +1066,6 @@ function Dashboard() {
         teamId: selectedTeam?.id,
       });
 
-      // Increment usage count (non-blocking) — backend handles column creation
       if (selectedTemplate?.id) {
         api.post(`/api/templates/${selectedTemplate.id}/use`).catch(() => {});
       }
@@ -933,7 +1074,7 @@ function Dashboard() {
       setSelectedTemplate(null);
       setShowCreateBoard(false);
       fetchUserBoards();
-      if (board.id) navigate(`/board/${board.id}`);
+      if (board.id) navigate(`/boards/${board.id}`);
     } catch (err) {
       setBoardError(err.message || "Failed to create board");
     } finally {
@@ -961,7 +1102,7 @@ function Dashboard() {
   const totalPages = Math.ceil(filteredBoards.length / itemsPerPage);
   const paginatedBoards = filteredBoards.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const canManage = userRole === "ADMIN" || userRole === "MANAGER";
@@ -976,7 +1117,9 @@ function Dashboard() {
               onClick={() => setMenuOpen((o) => !o)}
               aria-label="Toggle navigation menu"
             >
-              <span /><span /><span />
+              <span />
+              <span />
+              <span />
             </button>
             <span className="dash-logo">SegmentoRetro</span>
           </div>
@@ -1011,38 +1154,76 @@ function Dashboard() {
             {profileMenuOpen && (
               <div className="profile-dropdown">
                 <div className="profile-dropdown-header">
-                  <div className="profile-dropdown-avatar">{getInitials(userName)}</div>
+                  <div className="profile-dropdown-avatar">
+                    {getInitials(userName)}
+                  </div>
                   <div className="profile-dropdown-info">
                     {editingName ? (
-                      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "4px",
+                          alignItems: "center",
+                        }}
+                      >
                         <input
                           type="text"
                           value={newName}
                           onChange={(e) => setNewName(e.target.value)}
                           className="profile-name-input"
                           autoFocus
-                          onKeyPress={(e) => e.key === "Enter" && handleSaveName()}
+                          onKeyPress={(e) =>
+                            e.key === "Enter" && handleSaveName()
+                          }
                         />
-                        <button onClick={handleSaveName} className="profile-save-btn">✓</button>
-                        <button onClick={() => setEditingName(false)} className="profile-cancel-btn">✕</button>
+                        <button
+                          onClick={handleSaveName}
+                          className="profile-save-btn"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingName(false)}
+                          className="profile-cancel-btn"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span className="profile-dropdown-name">{userName}</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span className="profile-dropdown-name">
+                          {userName}
+                        </span>
                         <button
-                          onClick={() => { setNewName(userName); setEditingName(true); }}
+                          onClick={() => {
+                            setNewName(userName);
+                            setEditingName(true);
+                          }}
                           className="profile-edit-btn"
                         >
                           ✎
                         </button>
                       </div>
                     )}
-                    <span className="profile-dropdown-email">{userProfile.email || "No email"}</span>
-                    <span className="profile-dropdown-role">{userProfile.role}</span>
+                    <span className="profile-dropdown-email">
+                      {userProfile.email || "No email"}
+                    </span>
+                    <span className="profile-dropdown-role">
+                      {userProfile.role}
+                    </span>
                   </div>
                 </div>
                 <div className="profile-dropdown-divider" />
-                <button className="profile-dropdown-item" onClick={handleLogout}>
+                <button
+                  className="profile-dropdown-item"
+                  onClick={handleLogout}
+                >
                   <span>🚪</span> Log out
                 </button>
               </div>
@@ -1074,7 +1255,8 @@ function Dashboard() {
                 Dashboard
                 {userBoards.length > 0 && (
                   <span className="badge-count" style={{ marginLeft: 10 }}>
-                    {userBoards.length} {userBoards.length === 1 ? "Board" : "Boards"}
+                    {userBoards.length}{" "}
+                    {userBoards.length === 1 ? "Board" : "Boards"}
                   </span>
                 )}
               </h1>
@@ -1088,7 +1270,10 @@ function Dashboard() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                  <button className="search-clear" onClick={() => setSearchQuery("")}>
+                  <button
+                    className="search-clear"
+                    onClick={() => setSearchQuery("")}
+                  >
                     <FiX size={14} />
                   </button>
                 )}
@@ -1104,7 +1289,11 @@ function Dashboard() {
             {boardsError && !loadingBoards && (
               <div className="error-banner">
                 {boardsError}
-                <button onClick={fetchUserBoards} className="link-btn" style={{ marginLeft: 8 }}>
+                <button
+                  onClick={fetchUserBoards}
+                  className="link-btn"
+                  style={{ marginLeft: 8 }}
+                >
                   Retry
                 </button>
               </div>
@@ -1142,10 +1331,14 @@ function Dashboard() {
                     >
                       ← Previous
                     </button>
-                    <div className="pagination-info">Page {currentPage} of {totalPages}</div>
+                    <div className="pagination-info">
+                      Page {currentPage} of {totalPages}
+                    </div>
                     <button
                       className="pagination-btn"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       Next →
@@ -1154,28 +1347,36 @@ function Dashboard() {
                 )}
 
                 {filteredBoards.length === 0 && searchQuery && (
-                  <p className="empty-desc" style={{ marginTop: 16, textAlign: "center" }}>
+                  <p
+                    className="empty-desc"
+                    style={{ marginTop: 16, textAlign: "center" }}
+                  >
                     No boards match "{searchQuery}"
                   </p>
                 )}
 
-                {filteredBoards.length === 0 && !searchQuery && userBoards.length === 0 && (
-                  <div className="empty-state">
-                    {userRole === "MEMBER" ? (
-                      <>
-                        <h3 className="empty-title">No boards assigned yet</h3>
-                        <p className="empty-desc">
-                          You haven't been assigned to any boards yet. Please wait for your
-                          team administrator to add you to a board, or contact them for access.
+                {filteredBoards.length === 0 &&
+                  !searchQuery &&
+                  userBoards.length === 0 && (
+                    <div className="empty-state">
+                      {userRole === "MEMBER" ? (
+                        <>
+                          <h3 className="empty-title">
+                            No boards assigned yet
+                          </h3>
+                          <p className="empty-desc">
+                            You haven't been assigned to any boards yet. Please
+                            wait for your team administrator to add you to a
+                            board, or contact them for access.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="empty-desc" style={{ marginTop: 8 }}>
+                          No boards yet. Create your first board to get started!
                         </p>
-                      </>
-                    ) : (
-                      <p className="empty-desc" style={{ marginTop: 8 }}>
-                        No boards yet. Create your first board to get started!
-                      </p>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
               </>
             )}
           </div>
@@ -1185,7 +1386,9 @@ function Dashboard() {
 
         {!["Dashboard", "Teams"].includes(activeTab) && (
           <div className="empty-state">
-            <h2 style={{ fontSize: 20, marginBottom: 8, color: "#555" }}>{activeTab}</h2>
+            <h2 style={{ fontSize: 20, marginBottom: 8, color: "#555" }}>
+              {activeTab}
+            </h2>
             <p className="empty-desc">This section is coming soon.</p>
           </div>
         )}
@@ -1193,11 +1396,20 @@ function Dashboard() {
 
       {/* ── Create Board Modal ── */}
       {showCreateBoard && (
-        <div className="modal-backdrop" onClick={() => !creating && handleCloseCreateBoard()}>
+        <div
+          className="modal-backdrop"
+          onClick={() => !creating && handleCloseCreateBoard()}
+        >
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
               <h2 className="modal-title">Create Board</h2>
-              <button className="modal-close" onClick={handleCloseCreateBoard} disabled={creating}>×</button>
+              <button
+                className="modal-close"
+                onClick={handleCloseCreateBoard}
+                disabled={creating}
+              >
+                ×
+              </button>
             </header>
             <form className="modal-body" onSubmit={handleCreateBoard}>
               <label className="field-group">
@@ -1223,12 +1435,16 @@ function Dashboard() {
                     className="field-input"
                     value={selectedTeam?.id ?? teams[0]?.id}
                     onChange={(e) =>
-                      setSelectedTeam(teams.find((t) => t.id === Number(e.target.value)))
+                      setSelectedTeam(
+                        teams.find((t) => t.id === Number(e.target.value)),
+                      )
                     }
                     required
                   >
                     {teams.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -1276,27 +1492,37 @@ function Dashboard() {
                 {showTemplateList && (
                   <div className="template-list">
                     {loadingTemplates && (
-                      <div className="template-list-item field-muted">Loading templates...</div>
+                      <div className="template-list-item field-muted">
+                        Loading templates...
+                      </div>
                     )}
                     {templatesError && !loadingTemplates && (
-                      <div className="template-list-item field-error">{templatesError}</div>
+                      <div className="template-list-item field-error">
+                        {templatesError}
+                      </div>
                     )}
-                    {!loadingTemplates && !templatesError && templates.length === 0 && (
-                      <div className="template-list-item field-muted">No templates available</div>
-                    )}
-                    {!loadingTemplates && !templatesError && templates.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className="template-list-item"
-                        onClick={() => {
-                          setSelectedTemplate(t);
-                          setShowTemplateList(false);
-                        }}
-                      >
-                        {t.title || t.name || `Template ${t.id}`}
-                      </button>
-                    ))}
+                    {!loadingTemplates &&
+                      !templatesError &&
+                      templates.length === 0 && (
+                        <div className="template-list-item field-muted">
+                          No templates available
+                        </div>
+                      )}
+                    {!loadingTemplates &&
+                      !templatesError &&
+                      templates.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="template-list-item"
+                          onClick={() => {
+                            setSelectedTemplate(t);
+                            setShowTemplateList(false);
+                          }}
+                        >
+                          {t.title || t.name || `Template ${t.id}`}
+                        </button>
+                      ))}
                   </div>
                 )}
               </div>
@@ -1304,7 +1530,11 @@ function Dashboard() {
               {boardError && <p className="field-error">{boardError}</p>}
 
               <footer className="modal-footer">
-                <button type="submit" className="btn-primary" disabled={creating}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={creating}
+                >
                   {creating ? "Creating…" : "Create"}
                 </button>
                 <button
