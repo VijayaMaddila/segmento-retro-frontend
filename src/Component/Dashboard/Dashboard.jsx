@@ -5,7 +5,6 @@ import TemplateSelector from "../Templates/TemplateSelector";
 import api from "../../api";
 import "./dashboard.css";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getInitials(name) {
   if (!name) return "?";
@@ -41,7 +40,7 @@ const PALETTE = [
   { bg: "#e8eaf6", accent: "#3f51b5" },
 ];
 
-// ─── Create Template Modal ───────────────────────────────────────────────────
+//Create Template Modal
 
 function CreateTemplateModal({ onClose, onCreated }) {
   const [templateName, setTemplateName] = useState("");
@@ -100,7 +99,7 @@ function CreateTemplateModal({ onClose, onCreated }) {
         columns: filled.map((c, i) => ({ name: c.name.trim(), position: i })),
       });
       onCreated(data);
-      // onClose is called by the parent via onCreated; modal unmounts automatically
+      
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -236,7 +235,7 @@ function CreateTemplateModal({ onClose, onCreated }) {
   );
 }
 
-// ─── Create Team Modal ───────────────────────────────────────────────────────
+//Create Team
 
 function CreateTeamModal({ onClose, onCreated }) {
   const [teamName, setTeamName] = useState("");
@@ -514,7 +513,7 @@ function CreateTeamModal({ onClose, onCreated }) {
   );
 }
 
-// ─── Board Card ──────────────────────────────────────────────────────────────
+//Board Card 
 
 function BoardCard({ board, onClick, onDelete }) {
   const { bg, accent } = PALETTE[board.id % PALETTE.length];
@@ -602,7 +601,7 @@ function BoardCard({ board, onClick, onDelete }) {
   );
 }
 
-// ─── Team Card ───────────────────────────────────────────────────────────────
+//Team Card
 
 function TeamCard({ team, idx, isDeleting }) {
   const { bg, accent } = PALETTE[idx % PALETTE.length];
@@ -659,7 +658,7 @@ function TeamCard({ team, idx, isDeleting }) {
   );
 }
 
-// ─── Teams Tab ───────────────────────────────────────────────────────────────
+//Teams Tab
 
 function TeamsTab() {
   const [teams, setTeams] = useState([]);
@@ -720,7 +719,7 @@ function TeamsTab() {
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className="search-container">
-            <FiSearch className="search-icon" size={16} />
+            <FiSearch className="search-icon" size={16} gap={10} />
             <input
               type="search"
               placeholder="Search teams..."
@@ -845,7 +844,7 @@ function TeamsTab() {
   );
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────────
+//Dashboard 
 
 const NAV_TABS = ["Dashboard", "Teams", "Analytics", "Integrations"];
 
@@ -859,7 +858,7 @@ function Dashboard() {
   const menuRef = useRef(null);
   const profileMenuRef = useRef(null);
 
-  // ── User profile ──
+  
   const [userProfile, setUserProfile] = useState({
     name: "Loading...",
     email: "",
@@ -870,10 +869,10 @@ function Dashboard() {
   useEffect(() => {
     async function fetchUserProfile() {
       try {
-        const data = await api.get("/api/users/current");
+        const data = await api.get(`/api/users/${userId}`);
         setUserProfile({
-          name: data.name || data.username || "User",
-          email: data.email || data.emailId || data.mail || "No email",
+          name: data.name || data.username,
+          email: data.email || "No email",
           role: data.role || "MEMBER",
         });
         if (data.id && !localStorage.getItem("userId")) {
@@ -957,7 +956,7 @@ function Dashboard() {
   const [boardsError, setBoardsError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 18;
+  const itemsPerPage = 10;
 
   const [templates, setTemplates] = useState([]);
   const [templatesError, setTemplatesError] = useState("");
@@ -1074,7 +1073,7 @@ function Dashboard() {
       setSelectedTemplate(null);
       setShowCreateBoard(false);
       fetchUserBoards();
-      if (board.id) navigate(`/boards/${board.id}`);
+      if (board.id) navigate(`/board/${board.id}`);
     } catch (err) {
       setBoardError(err.message || "Failed to create board");
     } finally {
@@ -1089,7 +1088,6 @@ function Dashboard() {
     setShowCreateBoard(true);
   }
 
-  // ── Board filtering & pagination ──
   const filteredBoards = userBoards.filter((board) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -1316,7 +1314,7 @@ function Dashboard() {
                     <BoardCard
                       key={board.id}
                       board={board}
-                      onClick={() => navigate(`/board/${board.id}`)}
+                      onClick={() => navigate(`/boards/${board.id}`)}
                       onDelete={handleDeleteBoard}
                     />
                   ))}

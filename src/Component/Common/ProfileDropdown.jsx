@@ -28,7 +28,7 @@ function ProfileDropdown() {
   useEffect(() => {
     async function fetchUserProfile() {
       try {
-        const data = await api.get('/api/users/current');
+        const data = await api.get(`/api/users/${userId}`);
         setUserProfile({
           name: data.name || data.username || "User",
           email: data.email || data.emailId || data.mail || "No email",

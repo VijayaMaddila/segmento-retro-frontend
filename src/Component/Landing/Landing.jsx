@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiCheck, FiZap, FiUsers } from "react-icons/fi";
+import TemplateSelector from "../Templates/TemplateSelector";
 import "./landing.css";
 
 function Landing() {
   const navigate = useNavigate();
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const handleAuthAction = (path) => {
     const token = localStorage.getItem("token");
@@ -16,10 +20,8 @@ function Landing() {
 
   return (
     <div className="landing-page">
-      {/* Gradient Background */}
       <div className="gradient-bg"></div>
 
-      {/* Navigation */}
       <nav className="landing-nav">
         <div className="nav-container">
           <div className="nav-logo">SegmentoRetro</div>
@@ -36,9 +38,25 @@ function Landing() {
             >
               Try for free
             </button>
+            <button
+              onClick={() => setShowTemplateSelector(true)}
+              className="btn-nav-signup"
+            >
+              Explore Templates
+            </button>
           </div>
         </div>
       </nav>
+
+      {showTemplateSelector && (
+        <TemplateSelector
+          onClose={() => setShowTemplateSelector(false)}
+          onSelect={(template) => {
+            setSelectedTemplate(template);
+            setShowTemplateSelector(false);
+          }}
+        />
+      )}
 
       {/* Hero Section */}
       <section className="hero-section">

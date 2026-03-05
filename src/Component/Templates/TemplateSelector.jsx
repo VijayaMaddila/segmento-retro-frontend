@@ -1,38 +1,36 @@
-
-import { useState, useEffect } from 'react';
-import api from '../../api';
-import './TemplateSelector.css';
+import { useState, useEffect } from "react";
+import api from "../../api";
+import "./TemplateSelector.css";
 
 const CATEGORIES = [
-  { value: 'All', label: 'All' },
-  { value: 'Classic', label: 'Classic' },
-  { value: 'Agile', label: 'Agile' },
-  { value: 'Team Management', label: 'Team Management' },
-  { value: 'Team Building', label: 'Team Building' },
-  { value: 'Project Management', label: 'Project Management' },
-  { value: 'Product Management', label: 'Product Management' },
-  { value: 'Personal', label: 'Personal' },
-  { value: 'Icebreakers', label: 'Icebreakers' },
-  { value: 'Decision Making', label: 'Decision Making' },
+  { value: "All", label: "All" },
+  { value: "Classic", label: "Classic" },
+  { value: "Team Management", label: "Team Management" },
+  { value: "Team Building", label: "Team Building" },
+  { value: "Project Management", label: "Project Management" },
+  { value: "Product Management", label: "Product Management" },
+  { value: "Personal", label: "Personal" },
+  { value: "Icebreakers", label: "Icebreakers" },
+  { value: "Decision Making", label: "Decision Making" },
 ];
 
 const LANGUAGES = [
-  { value: 'All', label: 'All' },
-  { value: 'en', label: 'English' },
-  { value: 'es', label: 'Spanish' },
-  { value: 'fr', label: 'French' },
-  { value: 'de', label: 'German' },
-  { value: 'pt', label: 'Portuguese' },
-  { value: 'hi', label: 'Hindi' },
+  { value: "All", label: "All" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "pt", label: "Portuguese" },
+  { value: "hi", label: "Hindi" },
 ];
 
 function TemplateSelector({ onSelectTemplate, onClose }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedLanguage, setSelectedLanguage] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedLanguage, setSelectedLanguage] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   useEffect(() => {
@@ -42,62 +40,71 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
 
   const fetchTemplates = async () => {
     setLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
       let data;
-      
-      console.log('Fetching templates with filters:', { selectedCategory, selectedLanguage });
-      
+
+      console.log("Fetching templates with filters:", {
+        selectedCategory,
+        selectedLanguage,
+      });
+
       // Both category and language selected
-      if (selectedCategory !== 'All' && selectedLanguage !== 'All') {
+      if (selectedCategory !== "All" && selectedLanguage !== "All") {
         const encodedCategory = encodeURIComponent(selectedCategory);
         const encodedLanguage = encodeURIComponent(selectedLanguage);
         const url = `/api/templates/category/${encodedCategory}/language/${encodedLanguage}`;
-        console.log('Fetching URL:', url);
+        console.log("Fetching URL:", url);
         data = await api.get(url);
-      } 
+      }
       // Only category selected
-      else if (selectedCategory !== 'All') {
+      else if (selectedCategory !== "All") {
         const encodedCategory = encodeURIComponent(selectedCategory);
         const url = `/api/templates/category/${encodedCategory}`;
-        console.log('Fetching URL:', url);
+        console.log("Fetching URL:", url);
         data = await api.get(url);
-      } 
+      }
       // Only language selected
-      else if (selectedLanguage !== 'All') {
+      else if (selectedLanguage !== "All") {
         const encodedLanguage = encodeURIComponent(selectedLanguage);
         const url = `/api/templates/language/${encodedLanguage}`;
-        console.log('Fetching URL:', url);
+        console.log("Fetching URL:", url);
         data = await api.get(url);
-      } 
+      }
       // No filters - get all templates
       else {
-        console.log('Fetching URL: /api/templates');
-        data = await api.get('/api/templates');
+        console.log("Fetching URL: /api/templates");
+        data = await api.get("/api/templates");
       }
 
-      console.log('Templates response:', data);
-      console.log('Is array?', Array.isArray(data));
-      console.log('Length:', Array.isArray(data) ? data.length : 'not an array');
-      
+      console.log("Templates response:", data);
+      console.log("Is array?", Array.isArray(data));
+      console.log(
+        "Length:",
+        Array.isArray(data) ? data.length : "not an array",
+      );
+
       setTemplates(Array.isArray(data) ? data : []);
-      
+
       if (Array.isArray(data) && data.length === 0) {
-        console.warn('No templates found for filters:', { selectedCategory, selectedLanguage });
+        console.warn("No templates found for filters:", {
+          selectedCategory,
+          selectedLanguage,
+        });
       }
     } catch (err) {
-      console.error('Error fetching templates:', err);
-      console.error('Error status:', err.status);
-      console.error('Error data:', err.data);
-      
+      console.error("Error fetching templates:", err);
+      console.error("Error status:", err.status);
+      console.error("Error data:", err.data);
+
       // Show user-friendly error message
       if (err.status === 401) {
-        setError('Please login to view templates');
+        setError("Please login to view templates");
       } else if (err.status === 404) {
-        setError('No templates found for this category');
+        setError("No templates found for this category");
       } else {
-        setError(err.message || 'Failed to load templates');
+        setError(err.message || "Failed to load templates");
       }
     } finally {
       setLoading(false);
@@ -114,8 +121,8 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
   });
 
   const handleTemplateClick = (template) => {
-    console.log('Template clicked:', template);
-    console.log('Template columns:', template.columns);
+    console.log("Template clicked:", template);
+    console.log("Template columns:", template.columns);
     setSelectedTemplate(template);
   };
 
@@ -127,7 +134,10 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
 
   return (
     <div className="template-modal-overlay" onClick={onClose}>
-      <div className="template-modal-container" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="template-modal-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="template-modal-header">
           <h2>Create Board</h2>
           <button className="template-close-btn" onClick={onClose}>
@@ -161,7 +171,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.value}
-                  className={`template-category-btn ${selectedCategory === cat.value ? 'active' : ''}`}
+                  className={`template-category-btn ${selectedCategory === cat.value ? "active" : ""}`}
                   onClick={() => setSelectedCategory(cat.value)}
                 >
                   {cat.label}
@@ -174,7 +184,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
               {LANGUAGES.map((lang) => (
                 <button
                   key={lang.value}
-                  className={`template-language-btn ${selectedLanguage === lang.value ? 'active' : ''}`}
+                  className={`template-language-btn ${selectedLanguage === lang.value ? "active" : ""}`}
                   onClick={() => setSelectedLanguage(lang.value)}
                 >
                   {lang.label}
@@ -210,10 +220,12 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                 {filteredTemplates.map((template) => (
                   <div
                     key={template.id}
-                    className={`template-list-item ${selectedTemplate?.id === template.id ? 'selected' : ''}`}
+                    className={`template-list-item ${selectedTemplate?.id === template.id ? "selected" : ""}`}
                     onClick={() => handleTemplateClick(template)}
                   >
-                    <div className="template-list-item-title">{template.title}</div>
+                    <div className="template-list-item-title">
+                      {template.title}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -225,23 +237,38 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
             {selectedTemplate ? (
               <>
                 <div className="template-preview-header">
-                  <span className="template-preview-category">{selectedTemplate.category}</span>
-                  <span className="template-preview-language">{selectedTemplate.language || 'PT'}</span>
+                  <span className="template-preview-category">
+                    {selectedTemplate.category}
+                  </span>
+                  <span className="template-preview-language">
+                    {selectedTemplate.language || "PT"}
+                  </span>
                 </div>
 
                 <div className="template-preview-image">
                   {/* Template visual preview */}
                   <div className="template-columns-preview">
                     {selectedTemplate.columns?.slice(0, 10).map((col, idx) => (
-                      <div key={idx} className="template-column-card" style={{
-                        background: `hsl(${(idx * 60) % 360}, 70%, 85%)`
-                      }}>
-                        <div className="template-column-title">{col.name || col.title}</div>
+                      <div
+                        key={idx}
+                        className="template-column-card"
+                        style={{
+                          background: `hsl(${(idx * 60) % 360}, 70%, 85%)`,
+                        }}
+                      >
+                        <div className="template-column-title">
+                          {col.name || col.title}
+                        </div>
                       </div>
                     ))}
                     {selectedTemplate.columns?.length > 10 && (
-                      <div className="template-column-card" style={{ background: '#f0f0f0' }}>
-                        <div className="template-column-title">+{selectedTemplate.columns.length - 10} more</div>
+                      <div
+                        className="template-column-card"
+                        style={{ background: "#f0f0f0" }}
+                      >
+                        <div className="template-column-title">
+                          +{selectedTemplate.columns.length - 10} more
+                        </div>
                       </div>
                     )}
                   </div>
@@ -249,17 +276,26 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
 
                 <div className="template-preview-content">
                   <h3>{selectedTemplate.title}</h3>
-                  
+
                   {selectedTemplate.columns && (
                     <>
                       <ul className="template-preview-list">
-                        {selectedTemplate.columns.slice(0, 10).map((col, idx) => (
-                          <li key={idx}>{col.name || col.title}</li>
-                        ))}
+                        {selectedTemplate.columns
+                          .slice(0, 10)
+                          .map((col, idx) => (
+                            <li key={idx}>{col.name || col.title}</li>
+                          ))}
                       </ul>
                       {selectedTemplate.columns.length > 10 && (
-                        <p style={{ color: '#999', fontSize: '12px', marginTop: '8px' }}>
-                          ... and {selectedTemplate.columns.length - 10} more columns
+                        <p
+                          style={{
+                            color: "#999",
+                            fontSize: "12px",
+                            marginTop: "8px",
+                          }}
+                        >
+                          ... and {selectedTemplate.columns.length - 10} more
+                          columns
                         </p>
                       )}
                     </>
@@ -273,7 +309,10 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                     Used {selectedTemplate.usageCount || 0} times
                   </div>
 
-                  <button className="template-use-btn" onClick={handleUseTemplate}>
+                  <button
+                    className="template-use-btn"
+                    onClick={handleUseTemplate}
+                  >
                     Use template
                   </button>
                 </div>
