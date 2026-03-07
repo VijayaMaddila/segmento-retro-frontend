@@ -1602,13 +1602,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
 }
 
 .mobile-search-icon {
   position: absolute;
   left: 10px;
   color: #9ca3af;
+  display: none;
   pointer-events: none;
 }
 
