@@ -16,12 +16,8 @@ const CATEGORIES = [
 
 const LANGUAGES = [
   { value: "All", label: "All" },
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "pt", label: "Portuguese" },
-  { value: "hi", label: "Hindi" },
+  { value: "English", label: "English" },
+  { value: "Spanish", label: "Spanish" },
 ];
 
 function TemplateSelector({ onSelectTemplate, onClose }) {
