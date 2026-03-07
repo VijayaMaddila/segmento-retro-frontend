@@ -657,9 +657,11 @@ function Board() {
   }
 
   if (loading)
-    <div className="loading-state">
-      <span className="spinner" />
-    </div>;
+    return (
+      <div className="loading-state">
+        <span className="spinner" />
+      </div>
+    );
   if (error)
     return (
       <div className="board-error">
