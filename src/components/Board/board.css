@@ -1,14 +1,14 @@
 /*─────────────────────────────────────────────
-  GLOBAL
+  GLOBAL RESET
 ─────────────────────────────────────────────*/
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: "DM Sans", sans-serif;
 }
 
 :root {
-  /* Per-column hues */
   --col-1-hue: 217;
   --col-2-hue: 262;
   --col-3-hue: 142;
@@ -84,7 +84,6 @@
   background: #f0f2f5;
   display: flex;
   flex-direction: column;
-  font-family: "DM Sans", sans-serif;
 }
 
 /*─────────────────────────────────────────────
@@ -97,10 +96,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
   z-index: 200;
-  position: relative;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
+
 .board-header-left {
   display: flex;
   align-items: center;
@@ -113,23 +114,6 @@
   gap: 8px;
   flex: 1;
   justify-content: flex-end;
-}
-
-.back-to-dashboard-btn,
-.board-back-btn,
-.board-delete-btn,
-.board-action-btn,
-.add-column-btn,
-.vote-btn,
-.comment-btn,
-.save-card-btn,
-.cancel-card-btn,
-.card-dropdown-item,
-.column-dropdown-item {
-  font-family: "DM Sans", sans-serif;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
 }
 
 .board-logo {
@@ -157,11 +141,11 @@
   border-radius: 6px;
   font-size: 13px;
   outline: none;
+  color: #374151;
+  background: #fff;
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
-  color: #374151;
-  background: #fff;
 }
 .board-search-input:focus {
   border-color: #3b82f6;
@@ -195,12 +179,23 @@
   overflow-x: auto;
   height: 100%;
   align-items: flex-start;
-  padding: 0 4px;
+  padding-bottom: 12px;
+  scroll-behavior: smooth;
+}
+.board-columns::-webkit-scrollbar {
+  height: 6px;
+}
+.board-columns::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
 }
 
+/*─────────────────────────────────────────────
+  COLUMN
+─────────────────────────────────────────────*/
 .board-column {
   flex: 1;
-  min-width: 200px;
+  min-width: 220px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -225,7 +220,9 @@
   border-top: 4px solid var(--col-accent, #3b82f6);
   border-bottom: 1px solid var(--col-mid, #eaecf0);
   background: var(--col-light, #fafbfc);
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .column-title {
@@ -237,7 +234,7 @@
 }
 
 /*─────────────────────────────────────────────
-  CARDS
+  CARD
 ─────────────────────────────────────────────*/
 .card-item {
   background: #fff;
@@ -258,7 +255,7 @@
 }
 
 /*─────────────────────────────────────────────
-  BUTTONS CONSOLIDATION
+  BUTTONS
 ─────────────────────────────────────────────*/
 .button-common {
   font-size: 13px;
@@ -281,7 +278,7 @@
 }
 
 /*─────────────────────────────────────────────
-  COMMENTS & VOTES
+  COMMENTS
 ─────────────────────────────────────────────*/
 .comment-item,
 .card-comments-section {
@@ -332,6 +329,29 @@
 }
 
 /*─────────────────────────────────────────────
+  DROPDOWN
+─────────────────────────────────────────────*/
+.dropdown-menu {
+  position: absolute;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 300;
+  min-width: 150px;
+  overflow: hidden;
+}
+.dropdown-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dropdown-item:hover {
+  background: var(--col-light, #f3f4f6);
+}
+
+/*─────────────────────────────────────────────
   RESPONSIVE MOBILE
 ─────────────────────────────────────────────*/
 @media (max-width: 768px) {
@@ -341,8 +361,25 @@
   .mobile-only {
     display: flex;
   }
+
   .board-columns {
     flex-wrap: nowrap;
     overflow-x: auto;
+    padding-bottom: 16px;
+  }
+  .board-search-input {
+    width: 140px;
+  }
+  .column-header {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .card-item {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .button-common {
+    font-size: 12px;
+    padding: 5px 10px;
   }
 }
