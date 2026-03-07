@@ -656,15 +656,15 @@ function Board() {
     }
   }
 
-  {
-    loading && (
+  if (loading) {
+    return (
       <div className="loading-state">
         <span className="spinner" />
-        <p>Loading...</p>
       </div>
     );
   }
-  if (error)
+
+  if (error) {
     return (
       <div className="board-error">
         <p>{error}</p>
@@ -673,7 +673,9 @@ function Board() {
         </button>
       </div>
     );
-  if (!board)
+  }
+
+  if (!board) {
     return (
       <div className="board-error">
         <p>Board not found</p>
@@ -682,6 +684,7 @@ function Board() {
         </button>
       </div>
     );
+  }
 
   async function deleteBoard() {
     if (!canManageBoard) {
