@@ -151,7 +151,6 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
             {loading && (
               <div className="template-loading-state">
                 <div className="spinner" />
-                <p>Loading templates...</p>
               </div>
             )}
 

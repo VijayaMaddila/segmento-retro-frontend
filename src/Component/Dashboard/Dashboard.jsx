@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import TemplateSelector from "../Templates/TemplateSelector";
@@ -7,7 +7,6 @@ import CreateTeamModal from "../Common/CreateTeamModal";
 import TeamCard from "../Common/TeamCard";
 import api from "../../api";
 import { getInitials, formatDate, PALETTE } from "../../utils";
-import { useClickOutside } from "../../hooks";
 import "./dashboard.css";
 
 //Board Card
@@ -16,7 +15,15 @@ function BoardCard({ board, onClick, onDelete }) {
   const { bg, accent } = PALETTE[board.id % PALETTE.length];
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
-  useClickOutside(menuRef, () => setShowMenu(false), showMenu);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setShowMenu(false);
+    }
+    if (showMenu) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
 
   return (
     <div
@@ -323,12 +330,18 @@ function Dashboard() {
     fetchUserProfile();
   }, []);
 
-  const closeMenus = useCallback(() => {
-    setMenuOpen(false);
-    setProfileMenuOpen(false);
-  }, []);
-  const dashboardMenuRefs = useMemo(() => [menuRef, profileMenuRef], []);
-  useClickOutside(dashboardMenuRefs, closeMenus, menuOpen || profileMenuOpen);
+  // Close menus on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setMenuOpen(false);
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target))
+        setProfileMenuOpen(false);
+    }
+    if (menuOpen || profileMenuOpen)
+      document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen, profileMenuOpen]);
 
   function handleTabSelect(tab) {
     if (tab === "Analytics") {
