@@ -1854,7 +1854,6 @@
     display: inline-flex;
   }
 
-  /* Cards touch-friendly */
   .card-item {
     padding: 14px;
     min-height: 48px;
@@ -1967,7 +1966,6 @@
     min-width: 36px;
   }
 
-  /* Prevent iOS zoom on inputs */
   .card-textarea,
   .comment-input,
   .modal-input,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import api from "../../api";
 import "./TemplateSelector.css";
 
@@ -29,24 +29,46 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  // Fetch all templates once on mount
   useEffect(() => {
+    setSelectedTemplate(null); // Clear selected template when filters change
     fetchTemplates();
-  }, []);
+  }, [selectedCategory, selectedLanguage]);
 
   const fetchTemplates = async () => {
     setLoading(true);
     setError("");
+
     try {
-      const response = await api.get("/api/templates"); // Fetch all templates
-      setTemplates(Array.isArray(response.data) ? response.data : []);
+      let data;
+
+      // Both category and language selected
+      if (selectedCategory !== "All" && selectedLanguage !== "All") {
+        const encodedCategory = encodeURIComponent(selectedCategory);
+        const encodedLanguage = encodeURIComponent(selectedLanguage);
+        const url = `/api/templates/category/${encodedCategory}/language/${encodedLanguage}`;
+        data = await api.get(url);
+      }
+      // Only category selected
+      else if (selectedCategory !== "All") {
+        const encodedCategory = encodeURIComponent(selectedCategory);
+        const url = `/api/templates/category/${encodedCategory}`;
+        data = await api.get(url);
+      } else if (selectedLanguage !== "All") {
+        const encodedLanguage = encodeURIComponent(selectedLanguage);
+        const url = `/api/templates/language/${encodedLanguage}`;
+        data = await api.get(url);
+      } else {
+        data = await api.get("/api/templates");
+      }
+
+      setTemplates(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching templates:", err);
-      const status = err.response?.status;
-      if (status === 401) {
+
+      if (err.status === 401) {
         setError("Please login to view templates");
-      } else if (status === 404) {
-        setError("No templates found");
+      } else if (err.status === 404) {
+        setError("No templates found for this category");
       } else {
         setError(err.message || "Failed to load templates");
       }
@@ -55,24 +77,14 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
     }
   };
 
-  // Filter templates locally
-  const filteredTemplates = useMemo(() => {
-    return templates
-      .filter(
-        (t) => selectedCategory === "All" || t.category === selectedCategory,
-      )
-      .filter(
-        (t) => selectedLanguage === "All" || t.language === selectedLanguage,
-      )
-      .filter((t) => {
-        if (!searchQuery.trim()) return true;
-        const q = searchQuery.toLowerCase();
-        return (
-          t.title?.toLowerCase().includes(q) ||
-          t.description?.toLowerCase().includes(q)
-        );
-      });
-  }, [templates, selectedCategory, selectedLanguage, searchQuery]);
+  const filteredTemplates = templates.filter((template) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      template.title?.toLowerCase().includes(query) ||
+      template.description?.toLowerCase().includes(query)
+    );
+  });
 
   const handleTemplateClick = (template) => {
     setSelectedTemplate(template);
@@ -98,7 +110,6 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
         </div>
 
         <div className="template-modal-body">
-          {/* Sidebar */}
           <div className="template-sidebar">
             <div className="template-nav-section">
               <h3>Template info</h3>
@@ -146,11 +157,12 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
             </div>
           </div>
 
-          {/* Template List */}
+          {/* Middle - Template List */}
           <div className="template-list-section">
             {loading && (
               <div className="template-loading-state">
                 <div className="spinner" />
+                <p>Loading templates...</p>
               </div>
             )}
 
@@ -184,7 +196,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
             )}
           </div>
 
-          {/* Template Preview */}
+          {/* Right - Template Preview */}
           <div className="template-preview-section">
             {selectedTemplate ? (
               <>
@@ -198,6 +210,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                 </div>
 
                 <div className="template-preview-image">
+                  {/* Template visual preview */}
                   <div className="template-columns-preview">
                     {selectedTemplate.columns?.slice(0, 10).map((col, idx) => (
                       <div
@@ -227,6 +240,7 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
 
                 <div className="template-preview-content">
                   <h3>{selectedTemplate.title}</h3>
+
                   {selectedTemplate.columns && (
                     <>
                       <ul className="template-preview-list">
@@ -250,16 +264,18 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
                       )}
                     </>
                   )}
+
                   <p className="template-preview-description">
                     {selectedTemplate.description}
                   </p>
+
                   <div className="template-preview-stats">
                     Used {selectedTemplate.usageCount || 0} times
                   </div>
+
                   <button
                     className="template-use-btn"
                     onClick={handleUseTemplate}
-                    disabled={!selectedTemplate}
                   >
                     Use template
                   </button>
