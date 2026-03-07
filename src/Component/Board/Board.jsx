@@ -656,12 +656,14 @@ function Board() {
     }
   }
 
-  if (loading)
-    return (
+  {
+    loading && (
       <div className="loading-state">
         <span className="spinner" />
+        <p>Loading...</p>
       </div>
     );
+  }
   if (error)
     return (
       <div className="board-error">
