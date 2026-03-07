@@ -1,17 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
+import { getInitials } from "../../utils";
+import { useClickOutside } from "../../hooks";
 import "./ProfileDropdown.css";
-
-function getInitials(name) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 function ProfileDropdown() {
   const navigate = useNavigate();
@@ -27,6 +19,15 @@ function ProfileDropdown() {
 
   useEffect(() => {
     async function fetchUserProfile() {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        setUserProfile({
+          name: localStorage.getItem("name") || "User",
+          email: localStorage.getItem("email") || "No email",
+          role: localStorage.getItem("role") || "MEMBER"
+        });
+        return;
+      }
       try {
         const data = await api.get(`/api/users/${userId}`);
         setUserProfile({
@@ -49,17 +50,7 @@ function ProfileDropdown() {
     fetchUserProfile();
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
-        setProfileMenuOpen(false);
-      }
-    }
-    if (profileMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [profileMenuOpen]);
+  useClickOutside(profileMenuRef, () => setProfileMenuOpen(false), profileMenuOpen);
 
   function handleLogout() {
     localStorage.clear();

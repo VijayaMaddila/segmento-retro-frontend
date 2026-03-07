@@ -45,58 +45,33 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
     try {
       let data;
 
-      console.log("Fetching templates with filters:", {
-        selectedCategory,
-        selectedLanguage,
-      });
-
       // Both category and language selected
       if (selectedCategory !== "All" && selectedLanguage !== "All") {
         const encodedCategory = encodeURIComponent(selectedCategory);
         const encodedLanguage = encodeURIComponent(selectedLanguage);
         const url = `/api/templates/category/${encodedCategory}/language/${encodedLanguage}`;
-        console.log("Fetching URL:", url);
         data = await api.get(url);
       }
       // Only category selected
       else if (selectedCategory !== "All") {
         const encodedCategory = encodeURIComponent(selectedCategory);
         const url = `/api/templates/category/${encodedCategory}`;
-        console.log("Fetching URL:", url);
         data = await api.get(url);
       }
       // Only language selected
       else if (selectedLanguage !== "All") {
         const encodedLanguage = encodeURIComponent(selectedLanguage);
         const url = `/api/templates/language/${encodedLanguage}`;
-        console.log("Fetching URL:", url);
         data = await api.get(url);
       }
       // No filters - get all templates
       else {
-        console.log("Fetching URL: /api/templates");
         data = await api.get("/api/templates");
       }
 
-      console.log("Templates response:", data);
-      console.log("Is array?", Array.isArray(data));
-      console.log(
-        "Length:",
-        Array.isArray(data) ? data.length : "not an array",
-      );
-
       setTemplates(Array.isArray(data) ? data : []);
-
-      if (Array.isArray(data) && data.length === 0) {
-        console.warn("No templates found for filters:", {
-          selectedCategory,
-          selectedLanguage,
-        });
-      }
     } catch (err) {
       console.error("Error fetching templates:", err);
-      console.error("Error status:", err.status);
-      console.error("Error data:", err.data);
 
       // Show user-friendly error message
       if (err.status === 401) {
@@ -121,8 +96,6 @@ function TemplateSelector({ onSelectTemplate, onClose }) {
   });
 
   const handleTemplateClick = (template) => {
-    console.log("Template clicked:", template);
-    console.log("Template columns:", template.columns);
     setSelectedTemplate(template);
   };
 

@@ -22,8 +22,6 @@ function MagicLogin() {
     // Call backend magic login endpoint
     api.get(`/api/auth/magic-login?token=${token}`)
       .then((data) => {
-        console.log('Magic login successful:', data);
-        
         // Store the JWT token and user info in localStorage
         if (data.token) {
           localStorage.setItem('token', data.token);
@@ -33,7 +31,7 @@ function MagicLogin() {
         }
         if (data.name) {
           localStorage.setItem('name', data.name);
-          localStorage.setItem('userName', data.name); // Backup key
+          localStorage.setItem('userName', data.name);
         }
         if (data.email) {
           localStorage.setItem('email', data.email);
@@ -41,14 +39,7 @@ function MagicLogin() {
         if (data.role) {
           localStorage.setItem('role', data.role);
         }
-        
-        console.log('✅ User authenticated and stored in localStorage:', {
-          userId: data.userId,
-          name: data.name,
-          email: data.email,
-          role: data.role
-        });
-        
+
         setStatus('success');
         
         // Redirect to specific board or dashboard after a short delay

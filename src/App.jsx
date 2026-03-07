@@ -1,18 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Landing from "./Component/Landing/Landing";
-import Register from "./Component/Register/Register";
-import Dashboard from "./Component/Dashboard/Dashboard";
-import Board from "./Component/Board/Board";
-import Analytics from "./Component/Analytics/Analytics";
-import Teams from "./Component/Teams/Teams";
-import Integrations from "./Component/Integrations/Integrations";
-import JoinPage from "./Component/Join/JoinPage";
-import MagicLogin from "./Component/MagicLogin/MagicLogin";
-
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" replace />;
-}
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "./routes";
+import Landing from "./components/Landing/Landing";
+import Register from "./components/Register/Register";
+import Dashboard from "./components/Dashboard/Dashboard";
+import Board from "./components/Board/Board";
+import Analytics from "./components/Analytics/Analytics";
+import Teams from "./components/Teams/Teams";
+import Integrations from "./components/Integrations/Integrations";
+import JoinPage from "./components/Join/JoinPage";
+import MagicLogin from "./components/MagicLogin/MagicLogin";
 
 function App() {
   return (

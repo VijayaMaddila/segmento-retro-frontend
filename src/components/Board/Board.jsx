@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   FiThumbsUp,
   FiMessageCircle,
@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api";
+import { useClickOutside } from "../../hooks";
 import "./board.css";
 
 const SORT_OPTIONS = [
@@ -50,14 +51,7 @@ function applySortAndSearch(cards, search, sort) {
 function SortDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  useClickOutside(ref, () => setOpen(false), open);
 
   const selected = SORT_OPTIONS.find((o) => o.value === value);
 
@@ -102,18 +96,11 @@ function MobileNavMenu({
   const [showSortSub, setShowSortSub] = useState(false);
   const ref = useRef(null);
 
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-        setShowSortSub(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  useClickOutside(ref, () => {
+    setOpen(false);
+    setShowSortSub(false);
+  }, open);
 
-  
   useEffect(() => {
     function handleKey(e) {
       if (e.key === "Escape") {
@@ -285,11 +272,10 @@ function Board() {
   const [openCardMenu, setOpenCardMenu] = useState(null);
   const cardMenuRef = useRef(null);
 
-  const name = localStorage.getItem("name" || "userName");
+  const name = localStorage.getItem("name") || localStorage.getItem("userName") || "User";
   const currentUserId = localStorage.getItem("userId");
   const userRole = localStorage.getItem("role") || "MEMBER";
 
-  
   const isCreator = board && currentUserId && (
     String(board.userId) === String(currentUserId) ||
     String(board.createdBy?.id) === String(currentUserId) ||
@@ -298,36 +284,15 @@ function Board() {
     String(board.user_id) === String(currentUserId) ||
     String(board.created_by) === String(currentUserId)
   );
-  
-  
+
   const canManageBoard = userRole === "ADMIN" || isCreator;
 
-  
-  useEffect(() => {
-    if (board) {
-      console.log("Board data:", board);
-      console.log("Current user ID:", currentUserId);
-      console.log("User role:", userRole);
-      console.log("Board userId:", board.userId);
-      console.log("Board createdBy:", board.createdBy);
-      console.log("Board createdBy.id:", board.createdBy?.id);
-      console.log("Is creator:", isCreator);
-      console.log("Can manage board:", canManageBoard);
-    }
-  }, [board, currentUserId, isCreator, userRole, canManageBoard]);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target)) {
-        setOpenColumnMenu(null);
-      }
-      if (cardMenuRef.current && !cardMenuRef.current.contains(e.target)) {
-        setOpenCardMenu(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+  const closeMenus = useCallback(() => {
+    setOpenColumnMenu(null);
+    setOpenCardMenu(null);
   }, []);
+  const menuRefs = useMemo(() => [columnMenuRef, cardMenuRef], []);
+  useClickOutside(menuRefs, closeMenus);
 
   useEffect(() => {
     fetchBoard();
@@ -395,44 +360,29 @@ function Board() {
     const userId = localStorage.getItem("userId");
     if (!userId || !boardId) return;
 
-    console.log("=== FETCHING VOTES ===");
-    console.log("BoardId:", boardId, "UserId:", userId);
-
     try {
       const remainingData = await api.get(`/api/votes/board/${boardId}/user/${userId}/remaining`);
-      console.log("Remaining votes data:", remainingData);
       setRemainingVotes(remainingData.remaining || 6);
       const votesData = await api.get(`/api/votes/board/${boardId}`);
-      console.log("Board votes data:", votesData);
-      
+
       const voteCounts = {};
       const userVoteCounts = {};
-      
+
       if (Array.isArray(votesData)) {
-        console.log("Processing", votesData.length, "vote records");
-        
-        votesData.forEach(vote => {
-          console.log("Vote record:", vote);
-          
+        votesData.forEach((vote) => {
           const cardId = vote.cardId || vote.card_id;
           if (cardId) {
             voteCounts[cardId] = (voteCounts[cardId] || 0) + 1;
           }
-        
           const voteUserId = vote.userId || vote.user_id;
           if (voteUserId === parseInt(userId, 10) && cardId) {
             userVoteCounts[cardId] = (userVoteCounts[cardId] || 0) + 1;
           }
         });
-      
-      } else {
-        console.warn("Votes data is not an array:", votesData);
       }
-      
+
       setCardVoteCounts(voteCounts);
       setUserVotesByCard(userVoteCounts);
-      
-     
     } catch (err) {
       console.error("Error fetching voting info:", err);
     }
@@ -450,36 +400,32 @@ function Board() {
 
     try {
       const body = { cardId: cardIdNum, userId: userIdNum, boardId: boardIdNum };
-      console.log("Adding vote with body:", body);
 
       try {
         await api.post("/api/votes", body);
-        console.log("Vote added successfully");
-        setUserVotesByCard(prev => ({
+        setUserVotesByCard((prev) => ({
           ...prev,
-          [cardId]: (prev[cardId] || 0) + 1
+          [cardId]: (prev[cardId] || 0) + 1,
         }));
-        setRemainingVotes(prev => prev - 1);
-        setCardVoteCounts(prev => ({
+        setRemainingVotes((prev) => prev - 1);
+        setCardVoteCounts((prev) => ({
           ...prev,
-          [cardId]: (prev[cardId] || 0) + 1
+          [cardId]: (prev[cardId] || 0) + 1,
         }));
-      } catch (err) {
-      
-        console.log("Format 1 failed, trying Format 2");
-        await api.post(`/api/votes/card/${cardIdNum}/user/${userIdNum}`, { boardId: boardIdNum });
-        setUserVotesByCard(prev => ({
+      } catch {
+        await api.post(`/api/votes/card/${cardIdNum}/user/${userIdNum}`, {
+          boardId: boardIdNum,
+        });
+        setUserVotesByCard((prev) => ({
           ...prev,
-          [cardId]: (prev[cardId] || 0) + 1
+          [cardId]: (prev[cardId] || 0) + 1,
         }));
-        setRemainingVotes(prev => prev - 1);
-        setCardVoteCounts(prev => ({
+        setRemainingVotes((prev) => prev - 1);
+        setCardVoteCounts((prev) => ({
           ...prev,
-          [cardId]: (prev[cardId] || 0) + 1
+          [cardId]: (prev[cardId] || 0) + 1,
         }));
       }
-      
-      console.log("=== END VOTE DEBUG ===");
     } catch (err) {
       console.error("Error adding vote:", err);
       alert("Failed to add vote: " + err.message);
@@ -499,11 +445,8 @@ function Board() {
       userId: parseInt(userId, 10),
     };
 
-    console.log("Removing vote:", voteData);
-
     try {
       await api.delete("/api/votes", { body: JSON.stringify(voteData) });
-      console.log("Vote removed successfully");
       setUserVotesByCard(prev => ({
         ...prev,
         [cardId]: Math.max(0, (prev[cardId] || 0) - 1)
@@ -584,16 +527,9 @@ function Board() {
     if (!editColumnTitle.trim()) return alert("Column title cannot be empty");
 
     try {
-      const requestBody = {
+      await api.put(`/api/board-columns/${columnId}`, {
         title: editColumnTitle.trim(),
-      };
-
-      console.log("Sending update request:", requestBody);
-
-      const data = await api.put(`/api/board-columns/${columnId}`, requestBody);
-
-      console.log("Column updated successfully:", data);
-      console.log("Title in response:", data.title);
+      });
 
       setEditingColumnId(null);
       setEditColumnTitle("");

@@ -95,9 +95,7 @@ export default function JoinPage() {
         requestBody.email = email;
         requestBody.password = password;
       }
-      
-      console.log("Accepting invitation with body:", { ...requestBody, password: requestBody.password ? '***' : undefined });
-      
+
       const response = await api.post('/api/teams/accept-invite', requestBody);
 
       if (!response) {
@@ -105,7 +103,6 @@ export default function JoinPage() {
       }
 
       const responseData = response;
-      console.log("Join response data:", responseData);
 
       // Store authentication data
       if (responseData.token) {

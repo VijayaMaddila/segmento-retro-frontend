@@ -51,7 +51,7 @@ function Landing() {
       {showTemplateSelector && (
         <TemplateSelector
           onClose={() => setShowTemplateSelector(false)}
-          onSelect={(template) => {
+          onSelectTemplate={(template) => {
             setSelectedTemplate(template);
             setShowTemplateSelector(false);
           }}

@@ -642,6 +642,17 @@
     padding: 16px 20px;
   }
 
+  .nav-container {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .nav-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .hero-section {
     padding: 60px 20px;
   }
@@ -658,12 +669,18 @@
     padding: 12px 16px;
   }
 
+  .nav-container {
+    padding: 0 12px;
+  }
+
   .nav-logo {
     font-size: 20px;
   }
 
   .nav-actions {
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .btn-nav-login,

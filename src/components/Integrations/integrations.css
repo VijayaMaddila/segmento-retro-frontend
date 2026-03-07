@@ -106,3 +106,45 @@
   padding-top: 16px;
   border-top: 1px solid #e0e0e0;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .integrations-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .integration-card {
+    padding: 20px;
+  }
+
+  .integration-name {
+    font-size: 16px;
+  }
+
+  .integration-description {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .integrations-grid {
+    gap: 12px;
+  }
+
+  .integration-card {
+    padding: 16px;
+  }
+
+  .integration-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .integration-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}

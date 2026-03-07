@@ -1,533 +1,22 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiPlus, FiTrash2, FiUsers, FiX, FiSearch } from "react-icons/fi";
 import TemplateSelector from "../Templates/TemplateSelector";
+import CreateTemplateModal from "../Templates/CreateTemplateModal";
+import CreateTeamModal from "../Common/CreateTeamModal";
+import TeamCard from "../Common/TeamCard";
 import api from "../../api";
+import { getInitials, formatDate, PALETTE } from "../../utils";
+import { useClickOutside } from "../../hooks";
 import "./dashboard.css";
 
-
-function getInitials(name) {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function formatDate(str) {
-  if (!str) return null;
-  try {
-    return new Date(str).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return null;
-  }
-}
-
-const PALETTE = [
-  { bg: "#e8f4fd", accent: "#2196f3" },
-  { bg: "#fef3e2", accent: "#ff9800" },
-  { bg: "#eafaf1", accent: "#4caf50" },
-  { bg: "#fdf2f8", accent: "#e91e63" },
-  { bg: "#f0f4ff", accent: "#5c6bc0" },
-  { bg: "#fff8e1", accent: "#ffc107" },
-  { bg: "#fce4ec", accent: "#e53935" },
-  { bg: "#e8eaf6", accent: "#3f51b5" },
-];
-
-//Create Template Modal
-
-function CreateTemplateModal({ onClose, onCreated }) {
-  const [templateName, setTemplateName] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Retrospective");
-  const [language, setLanguage] = useState("English");
-  const [columns, setColumns] = useState([
-    { uid: 1, name: "" },
-    { uid: 2, name: "" },
-  ]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const categories = [
-    "Retrospective",
-    "Brainstorm",
-    "Team building",
-    "Design thinking / UX",
-    "Project management",
-    "Product management",
-    "Icebreakers",
-    "Personal",
-    "Decision making",
-  ];
-
-  const languages = ["English", "Portuguese", "Spanish", "French"];
-
-  function addColumn() {
-    setColumns((p) => [...p, { uid: Date.now() + Math.random(), name: "" }]);
-  }
-
-  function removeColumn(uid) {
-    if (columns.length <= 1) return;
-    setColumns((p) => p.filter((c) => c.uid !== uid));
-  }
-
-  function updateColumn(uid, value) {
-    setColumns((p) =>
-      p.map((c) => (c.uid === uid ? { ...c, name: value } : c)),
-    );
-  }
-
-  async function handleSave() {
-    setError("");
-    if (!templateName.trim()) return setError("Please enter a template name.");
-    if (!description.trim()) return setError("Please enter a description.");
-    const filled = columns.filter((c) => c.name.trim());
-    if (!filled.length) return setError("Please add at least one column.");
-    setSaving(true);
-    try {
-      const data = await api.post("/api/templates", {
-        title: templateName.trim(),
-        description: description.trim(),
-        category,
-        language,
-        columns: filled.map((c, i) => ({ name: c.name.trim(), position: i })),
-      });
-      onCreated(data);
-      
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-box"
-        style={{ maxWidth: 460 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 className="modal-title">Create Custom Template</h2>
-          <button className="modal-close" onClick={onClose}>
-            ×
-          </button>
-        </header>
-
-        <div className="modal-body">
-          <label className="field-group">
-            <span className="field-label">Template Name</span>
-            <input
-              className="field-input"
-              type="text"
-              placeholder="e.g. Sprint Retro, Team Health..."
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              autoFocus
-            />
-          </label>
-
-          <label className="field-group">
-            <span className="field-label">Description</span>
-            <textarea
-              className="field-input"
-              rows="3"
-              placeholder="Describe what this template is for..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-
-          <label className="field-group">
-            <span className="field-label">Category</span>
-            <select
-              className="field-input"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="field-group">
-            <span className="field-label">Language</span>
-            <select
-              className="field-input"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-            >
-              {languages.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="field-group">
-            <span className="field-label">Columns</span>
-            <div className="tpl-columns-list">
-              {columns.map((col, idx) => (
-                <div key={col.uid} className="tpl-column-row">
-                  <span className="tpl-column-index">{idx + 1}</span>
-                  <input
-                    className="field-input tpl-column-input"
-                    type="text"
-                    placeholder={`Column ${idx + 1} name`}
-                    value={col.name}
-                    onChange={(e) => updateColumn(col.uid, e.target.value)}
-                  />
-                  <button
-                    className="icon-btn icon-btn--danger"
-                    onClick={() => removeColumn(col.uid)}
-                    disabled={columns.length <= 1}
-                  >
-                    <FiTrash2 size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="link-btn"
-              style={{ marginTop: 6 }}
-              onClick={addColumn}
-            >
-              <FiPlus
-                size={12}
-                style={{ marginRight: 4, verticalAlign: "middle" }}
-              />
-              Add column
-            </button>
-          </div>
-
-          {error && <p className="field-error">{error}</p>}
-
-          <footer className="modal-footer">
-            <button
-              className="btn-primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Creating…" : "Create Template"}
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-          </footer>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-//Create Team
-
-function CreateTeamModal({ onClose, onCreated }) {
-  const [teamName, setTeamName] = useState("");
-  const [memberSearch, setMemberSearch] = useState("");
-  const [allUsers, setAllUsers] = useState([]);
-  const [selectedMembers, setSelectedMembers] = useState([]);
-  const [inviteEmails, setInviteEmails] = useState([]);
-  const [emailInput, setEmailInput] = useState("");
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    setLoadingUsers(true);
-    api
-      .get("/api/users")
-      .then((d) => setAllUsers(Array.isArray(d) ? d : []))
-      .catch(() => setAllUsers([]))
-      .finally(() => setLoadingUsers(false));
-  }, []);
-
-  const filteredUsers = allUsers.filter(
-    (u) =>
-      !selectedMembers.find((m) => m.id === u.id) &&
-      (!memberSearch ||
-        u.name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-        u.email?.toLowerCase().includes(memberSearch.toLowerCase())),
-  );
-
-  function addMember(user) {
-    setSelectedMembers((p) => [...p, user]);
-    setMemberSearch("");
-  }
-
-  function removeMember(id) {
-    setSelectedMembers((p) => p.filter((m) => m.id !== id));
-  }
-
-  function handleAddEmail(e) {
-    e.preventDefault();
-    const email = emailInput.trim();
-    if (!email) return;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email))
-      return setError("Please enter a valid email address");
-    if (inviteEmails.includes(email))
-      return setError("This email is already added");
-    setInviteEmails((p) => [...p, email]);
-    setEmailInput("");
-    setError("");
-  }
-
-  function removeEmail(email) {
-    setInviteEmails((p) => p.filter((e) => e !== email));
-  }
-
-  async function handleSave() {
-    setError("");
-    if (!teamName.trim()) return setError("Please enter a team name.");
-    setSaving(true);
-    try {
-      const userId = localStorage.getItem("userId");
-      const data = await api.post("/api/teams/create", {
-        name: teamName.trim(),
-        createdBy: userId ? Number(userId) : null,
-        members: selectedMembers.map((m) => m.id),
-      });
-
-      if (inviteEmails.length > 0) {
-        try {
-          await api.post(`/api/teams/${data.id}/invite`, inviteEmails);
-          alert(
-            `Team created! Invitation emails sent to ${inviteEmails.length} recipient(s).`,
-          );
-        } catch {
-          alert(
-            "Team created, but failed to send invitation emails. Please try again later.",
-          );
-        }
-      } else {
-        alert("Team created successfully!");
-      }
-
-      onCreated(data);
-      onClose();
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-box"
-        style={{ maxWidth: 480 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 className="modal-title">Create Team</h2>
-          <button className="modal-close" onClick={onClose}>
-            ×
-          </button>
-        </header>
-
-        <div className="modal-body">
-          <label className="field-group">
-            <span className="field-label">Team Name</span>
-            <input
-              className="field-input"
-              type="text"
-              placeholder="e.g. Frontend Squad, Design Team..."
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              autoFocus
-            />
-          </label>
-
-          <div className="field-group">
-            <span className="field-label">
-              Add Members
-              {allUsers.length > 0 && (
-                <span className="badge-muted">
-                  {allUsers.length} users available
-                </span>
-              )}
-            </span>
-
-            <div className="search-wrap">
-              <FiSearch size={14} className="search-icon" />
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Search by name or email..."
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-              />
-              {memberSearch && (
-                <button
-                  className="search-clear"
-                  type="button"
-                  onClick={() => setMemberSearch("")}
-                >
-                  <FiX size={12} />
-                </button>
-              )}
-            </div>
-
-            <div className="user-list">
-              {loadingUsers ? (
-                <div className="user-list-empty">
-                  <span className="spinner spinner--sm" /> Loading users...
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="user-list-empty">
-                  {memberSearch
-                    ? `No users match "${memberSearch}"`
-                    : "No users available"}
-                </div>
-              ) : (
-                filteredUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    className="user-list-item"
-                    onClick={() => addMember(user)}
-                  >
-                    <span className="user-avatar">
-                      {getInitials(user.name)}
-                    </span>
-                    <span className="user-info">
-                      <span className="user-name">{user.name}</span>
-                      {user.email && (
-                        <span className="user-email">{user.email}</span>
-                      )}
-                    </span>
-                    <span className="user-add-btn">+</span>
-                  </button>
-                ))
-              )}
-            </div>
-
-            {selectedMembers.length > 0 && (
-              <div className="selected-members">
-                <span className="selected-label">
-                  Selected ({selectedMembers.length})
-                </span>
-                <div className="chip-wrap">
-                  {selectedMembers.map((m) => (
-                    <div key={m.id} className="member-chip">
-                      <span className="chip-avatar">{getInitials(m.name)}</span>
-                      <span className="chip-name">{m.name || m.email}</span>
-                      <button
-                        type="button"
-                        className="chip-remove"
-                        onClick={() => removeMember(m.id)}
-                      >
-                        <FiX size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="field-group">
-            <span className="field-label">Invite by Email</span>
-            <form
-              onSubmit={handleAddEmail}
-              style={{ display: "flex", gap: "8px" }}
-            >
-              <input
-                type="email"
-                className="field-input"
-                placeholder="Enter email address..."
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <button
-                type="submit"
-                className="btn-primary"
-                style={{ padding: "8px 16px", whiteSpace: "nowrap" }}
-              >
-                Add Email
-              </button>
-            </form>
-
-            {inviteEmails.length > 0 && (
-              <div className="selected-members" style={{ marginTop: "12px" }}>
-                <span className="selected-label">
-                  Email Invitations ({inviteEmails.length})
-                </span>
-                <div className="chip-wrap">
-                  {inviteEmails.map((email) => (
-                    <div key={email} className="member-chip">
-                      <span className="chip-name">{email}</span>
-                      <button
-                        type="button"
-                        className="chip-remove"
-                        onClick={() => removeEmail(email)}
-                      >
-                        <FiX size={11} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {error && <p className="field-error">{error}</p>}
-
-          <footer className="modal-footer">
-            <button
-              className="btn-primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Creating…" : "Create Team"}
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
-          </footer>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-//Board Card 
+//Board Card
 
 function BoardCard({ board, onClick, onDelete }) {
   const { bg, accent } = PALETTE[board.id % PALETTE.length];
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target))
-        setShowMenu(false);
-    }
-    if (showMenu) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMenu]);
+  useClickOutside(menuRef, () => setShowMenu(false), showMenu);
 
   return (
     <div
@@ -601,63 +90,6 @@ function BoardCard({ board, onClick, onDelete }) {
   );
 }
 
-//Team Card
-
-function TeamCard({ team, idx, isDeleting }) {
-  const { bg, accent } = PALETTE[idx % PALETTE.length];
-  const memberCount = team.members?.length || 0;
-
-  return (
-    <div
-      className="dash-card"
-      style={{
-        background: bg,
-        position: "relative",
-        opacity: isDeleting ? 0.5 : 1,
-        pointerEvents: isDeleting ? "none" : "auto",
-        transition: "opacity 0.3s ease",
-      }}
-    >
-      <div className="dash-card-accent" style={{ background: accent }} />
-      <div className="dash-card-body">
-        <div className="dash-card-avatar" style={{ background: accent }}>
-          {getInitials(team.name)}
-        </div>
-        <div className="dash-card-info">
-          <h3 className="dash-card-title">{team.name}</h3>
-          <span className="dash-card-meta" style={{ color: accent }}>
-            <FiUsers
-              size={11}
-              style={{ marginRight: 3, verticalAlign: "middle" }}
-            />
-            {memberCount} {memberCount === 1 ? "member" : "members"}
-          </span>
-        </div>
-      </div>
-
-      {team.members?.length > 0 && (
-        <div className="mini-avatars">
-          {team.members.slice(0, 4).map((m, mi) => (
-            <div
-              key={mi}
-              className="mini-avatar"
-              style={{ background: PALETTE[(mi + 2) % PALETTE.length].accent }}
-              title={m.name || `Member ${mi + 1}`}
-            >
-              {getInitials(m.name || String(m))}
-            </div>
-          ))}
-          {team.members.length > 4 && (
-            <div className="mini-avatar mini-avatar--more">
-              +{team.members.length - 4}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 //Teams Tab
 
 function TeamsTab() {
@@ -719,7 +151,7 @@ function TeamsTab() {
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <div className="search-container">
-            <FiSearch className="search-icon" size={16} gap={10} />
+            <FiSearch className="search-icon" size={16} />
             <input
               type="search"
               placeholder="Search teams..."
@@ -844,7 +276,7 @@ function TeamsTab() {
   );
 }
 
-//Dashboard 
+//Dashboard
 
 const NAV_TABS = ["Dashboard", "Teams", "Analytics", "Integrations"];
 
@@ -858,7 +290,6 @@ function Dashboard() {
   const menuRef = useRef(null);
   const profileMenuRef = useRef(null);
 
-  
   const [userProfile, setUserProfile] = useState({
     name: "Loading...",
     email: "",
@@ -869,6 +300,9 @@ function Dashboard() {
   useEffect(() => {
     async function fetchUserProfile() {
       try {
+        const userId = localStorage.getItem("userId");
+
+        if (!userId) return;
         const data = await api.get(`/api/users/${userId}`);
         setUserProfile({
           name: data.name || data.username,
@@ -889,18 +323,12 @@ function Dashboard() {
     fetchUserProfile();
   }, []);
 
-  // Close menus on outside click
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target))
-        setMenuOpen(false);
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target))
-        setProfileMenuOpen(false);
-    }
-    if (menuOpen || profileMenuOpen)
-      document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuOpen, profileMenuOpen]);
+  const closeMenus = useCallback(() => {
+    setMenuOpen(false);
+    setProfileMenuOpen(false);
+  }, []);
+  const dashboardMenuRefs = useMemo(() => [menuRef, profileMenuRef], []);
+  useClickOutside(dashboardMenuRefs, closeMenus, menuOpen || profileMenuOpen);
 
   function handleTabSelect(tab) {
     if (tab === "Analytics") {
@@ -1314,7 +742,7 @@ function Dashboard() {
                     <BoardCard
                       key={board.id}
                       board={board}
-                      onClick={() => navigate(`/boards/${board.id}`)}
+                      onClick={() => navigate(`/board/${board.id}`)}
                       onDelete={handleDeleteBoard}
                     />
                   ))}
