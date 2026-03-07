@@ -1013,9 +1013,7 @@
   transform: none;
 }
 
-/* ─────────────────────────────────────────────
-   COMMENTS
-───────────────────────────────────────────── */
+/*COMMENTS */
 .card-comments-section {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -1245,9 +1243,7 @@
   font-weight: 600;
 }
 
-/* ─────────────────────────────────────────────
-   STATES
-───────────────────────────────────────────── */
+/*STATES*/
 .no-columns {
   padding: 40px;
   text-align: center;
@@ -1294,9 +1290,7 @@
   background: #2563eb;
 }
 
-/* ─────────────────────────────────────────────
-   MODAL
-───────────────────────────────────────────── */
+/* MODAL*/
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1407,9 +1401,7 @@
   border-top: 1px solid #f3f4f6;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MOBILE NAV DROPDOWN
-   ═══════════════════════════════════════════════════════════════ */
+/*MOBILE NAV DROPDOWN*/
 
 .mobile-nav-menu {
   position: relative;
@@ -1602,13 +1594,13 @@
   position: relative;
   display: flex;
   align-items: center;
+  gap: 20px;
 }
 
 .mobile-search-icon {
   position: absolute;
   left: 10px;
   color: #9ca3af;
-  display: none;
   pointer-events: none;
 }
 
@@ -1653,11 +1645,6 @@
   color: #ef4444;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── Large Desktop (≥1440px) ── */
 @media (min-width: 1440px) {
   .board-column {
     flex: 1;
