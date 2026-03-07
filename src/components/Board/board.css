@@ -743,6 +743,7 @@
   animation: dropdownSlide 0.15s ease;
 }
 .loading-state {
+  height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
